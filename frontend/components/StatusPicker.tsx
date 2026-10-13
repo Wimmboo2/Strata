@@ -1,7 +1,8 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "../lib/supabase-client";
 import type { ProjectStatus } from "../lib/types";
+import { useDropdownFlip } from "../lib/use-dropdown-flip";
 
 const OPTIONS: ProjectStatus[] = ["building", "finished", "paused"];
 const tone: Record<ProjectStatus, string> = {
@@ -24,7 +25,7 @@ export function StatusPicker({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [local, setLocal] = useState(status);
-  const ref = useRef<HTMLSpanElement>(null);
+  const { ref, up, measure } = useDropdownFlip<HTMLSpanElement>(220);
 
   useEffect(() => {
     setLocal(status);
@@ -36,7 +37,12 @@ export function StatusPicker({
     }
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
+  }, [ref]);
+
+  function toggle() {
+    measure();
+    setOpen((o) => !o);
+  }
 
   async function pick(next: ProjectStatus) {
     setOpen(false);
@@ -57,11 +63,11 @@ export function StatusPicker({
 
   return (
     <span className="dropdown-wrap" ref={ref}>
-      <button type="button" className={"tag chip-btn " + tone[local]} onClick={() => setOpen((o) => !o)} aria-label="Change status">
+      <button type="button" className={"tag chip-btn " + tone[local]} onClick={toggle} aria-label="Change status" aria-expanded={open}>
         {local}
       </button>
       {open ? (
-        <span className="dropdown" role="menu">
+        <span className={"dropdown" + (up ? " dropdown-up" : "")} role="menu">
           {OPTIONS.map((s) => (
             <button key={s} type="button" className="chip-btn" style={{ display: "flex", alignItems: "center", gap: 8, background: "transparent", border: "none", padding: "4px 0", cursor: "pointer", textAlign: "left" }} onClick={() => pick(s)}>
               <span className={"tag " + tone[s]}>{s}</span>

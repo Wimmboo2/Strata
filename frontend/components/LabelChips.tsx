@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "../lib/supabase-client";
+import { useDropdownFlip } from "../lib/use-dropdown-flip";
 
 export function LabelChips({
   projectId,
@@ -19,7 +20,7 @@ export function LabelChips({
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [local, setLocal] = useState(labels);
-  const ref = useRef<HTMLSpanElement>(null);
+  const { ref, up, measure } = useDropdownFlip<HTMLSpanElement>(340);
 
   useEffect(() => {
     setLocal(labels);
@@ -31,9 +32,14 @@ export function LabelChips({
     }
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
+  }, [ref]);
 
   const available = (suggestions ?? []).filter((s) => !local.includes(s));
+
+  function toggle() {
+    measure();
+    setOpen((o) => !o);
+  }
 
   async function add(name: string) {
     const clean = name.trim().toLowerCase().replace(/\s+/g, "-").slice(0, 30);
@@ -69,12 +75,12 @@ export function LabelChips({
         <span key={l} className="tag tag-neutral">{l}</span>
       ))}
       {editable ? (
-        <button type="button" className="tag tag-outline chip-btn" onClick={() => setOpen((o) => !o)} aria-label="Edit labels">
+        <button type="button" className="tag tag-outline chip-btn" onClick={toggle} aria-label="Edit labels" aria-expanded={open}>
           {open ? "close" : "+ labels"}
         </button>
       ) : null}
       {open ? (
-        <span className="dropdown" role="menu">
+        <span className={"dropdown" + (up ? " dropdown-up" : "")} role="menu">
           {local.length > 0 ? (
             <span style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {local.map((l) => (
