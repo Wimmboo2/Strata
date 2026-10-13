@@ -68,7 +68,23 @@ export default function EditProjectPage({ params }: { params: { id: string } }) 
     router.refresh();
   }
 
-  if (loading) return <p>Loading.</p>;
+  if (loading) {
+    return (
+      <div>
+        <div className="skeleton skeleton-line" style={{ width: 110, height: 13, marginBottom: 16 }} />
+        <div className="skeleton skeleton-line" style={{ width: 200, height: 38, marginBottom: 22, borderRadius: 14 }} />
+        <div className="skeleton skeleton-card" style={{ maxWidth: 520 }}>
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} style={{ marginBottom: 18 }}>
+              <div className="skeleton skeleton-line" style={{ width: 90, height: 11, marginBottom: 10 }} />
+              <div className="skeleton skeleton-line" style={{ width: "100%", height: 36 }} />
+            </div>
+          ))}
+          <div className="skeleton skeleton-line" style={{ width: 120, height: 38 }} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

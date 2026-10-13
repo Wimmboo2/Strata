@@ -6,6 +6,7 @@ import type { Project, ProjectStatus } from "../lib/types";
 import { ProjectCard } from "./ProjectCard";
 import { SyncButton } from "./SyncButton";
 import { SortDropdown } from "./SortDropdown";
+import { CountUp } from "./CountUp";
 import { importProfileRepos, type SyncRepo } from "../lib/github-sync";
 
 const TABS: { value: ProjectStatus | ""; label: string }[] = [
@@ -150,9 +151,9 @@ export function DashboardClient({
       <h1>{authed ? "Dashboard" : "Projects"}</h1>
       {authed ? (
         <div className="grid-3" style={{ marginBottom: 18 }}>
-          <div className="card"><div className="card-kicker">Building</div><div className="card-title" style={{ fontSize: 32 }}>{counts.building}</div></div>
-          <div className="card"><div className="card-kicker">Finished</div><div className="card-title" style={{ fontSize: 32 }}>{counts.finished}</div></div>
-          <div className="card"><div className="card-kicker">Paused</div><div className="card-title" style={{ fontSize: 32 }}>{counts.paused}</div></div>
+          <div className="card"><div className="card-kicker">Building</div><div className="stat-number"><CountUp value={counts.building} /></div></div>
+          <div className="card"><div className="card-kicker">Finished</div><div className="stat-number"><CountUp value={counts.finished} /></div></div>
+          <div className="card"><div className="card-kicker">Paused</div><div className="stat-number"><CountUp value={counts.paused} /></div></div>
         </div>
       ) : null}
       <div style={{ display: "flex", gap: 12, marginBottom: 18, flexWrap: "wrap", alignItems: "center" }}>

@@ -3,6 +3,7 @@ import { StatusPicker } from "../../../components/StatusPicker";
 import { LabelChips } from "../../../components/LabelChips";
 import { SyncButton } from "../../../components/SyncButton";
 import { ActivityList, type CommitItem, type PullItem, type IssueItem } from "../../../components/ActivityList";
+import { CountUp } from "../../../components/CountUp";
 import { relativeTime } from "../../../lib/format";
 import type { ProjectStatus } from "../../../lib/types";
 import Link from "next/link";
@@ -88,7 +89,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       <div className="grid-3">
         <div className="card" style={{ background: "var(--panel-1)" }}>
           <div className="card-kicker">Commits</div>
-          <div className="card-title" style={{ fontSize: 32, margin: "4px 0 8px" }}>{commits.length}</div>
+          <div className="stat-number" style={{ margin: "4px 0 8px" }}><CountUp value={commits.length} /></div>
           {latestCommit ? (
             <>
               <p className="card-body" style={{ margin: 0 }}>{firstName(latestCommit.message)}</p>
@@ -100,13 +101,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         </div>
         <div className="card" style={{ background: "var(--panel-2)" }}>
           <div className="card-kicker">Pull requests</div>
-          <div className="card-title" style={{ fontSize: 32, margin: "4px 0 8px" }}>{pulls.length}</div>
+          <div className="stat-number" style={{ margin: "4px 0 8px" }}><CountUp value={pulls.length} /></div>
           <p className="card-body" style={{ margin: 0 }}>{openPulls + " open, " + mergedPulls + " merged"}</p>
           {latestPull ? <div className="card-meta">{latestPull.title}</div> : null}
         </div>
         <div className="card" style={{ background: "var(--panel-3)" }}>
           <div className="card-kicker">Issues</div>
-          <div className="card-title" style={{ fontSize: 32, margin: "4px 0 8px" }}>{issues.length}</div>
+          <div className="stat-number" style={{ margin: "4px 0 8px" }}><CountUp value={issues.length} /></div>
           <p className="card-body" style={{ margin: 0 }}>{openIssues + " open, " + closedIssues + " closed"}</p>
           {latestIssue ? <div className="card-meta">{latestIssue.title}</div> : null}
         </div>
