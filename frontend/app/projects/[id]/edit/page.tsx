@@ -37,17 +37,12 @@ export default function EditProjectPage({ params }: { params: { id: string } }) 
     setSaving(true);
     try {
       const supabase = createClient();
-      const { error: uError } = await supabase
-        .from("projects")
-        .update({ name, description, status, updated_at: new Date().toISOString() })
-        .eq("id", params.id);
+      const { error: uError } = await supabase.from("projects").update({ name, description, status, updated_at: new Date().toISOString() }).eq("id", params.id);
       if (uError) throw uError;
       await supabase.from("labels").delete().eq("project_id", params.id);
       const names = labels.split(",").map((s) => s.trim()).filter(Boolean);
       if (names.length > 0) {
-        const { error: lError } = await supabase
-          .from("labels")
-          .insert(names.map((n) => ({ project_id: params.id, name: n })));
+        const { error: lError } = await supabase.from("labels").insert(names.map((n) => ({ project_id: params.id, name: n })));
         if (lError) throw lError;
       }
       window.location.href = `/projects/${params.id}`;
@@ -73,20 +68,25 @@ export default function EditProjectPage({ params }: { params: { id: string } }) 
 
   return (
     <div>
+      <p className="kicker">Edit entry</p>
       <h1>Edit project</h1>
-      <form onSubmit={onSave} style={{ display: "grid", gap: 12, maxWidth: 480 }}>
-        <input value={name} onChange={(e) => setName(e.target.value)} required />
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
-        <select value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
-          <option value="building">building</option>
-          <option value="finished">finished</option>
-          <option value="paused">paused</option>
-        </select>
-        <input value={labels} onChange={(e) => setLabels(e.target.value)} placeholder="Labels, comma separated" />
-        {error ? <p style={{ color: "red" }}>{error}</p> : null}
-        <button type="submit" disabled={saving}>{saving ? "Saving" : "Save"}</button>
-        <button type="button" onClick={onDelete}>Delete project</button>
-      </form>
+      <div className="card">
+        <form onSubmit={onSave}>
+          <div className="field"><label htmlFor="ename">Project name</label><input id="ename" className="input" value={name} onChange={(e) => setName(e.target.value)} required /></div>
+          <div className="field"><label htmlFor="edesc">Description</label><textarea id="edesc" className="input" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+          <div className="field"><label htmlFor="estatus">Status</label>
+            <select id="estatus" className="input" value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
+              <option value="building">building</option>
+              <option value="finished">finished</option>
+              <option value="paused">paused</option>
+            </select>
+          </div>
+          <div className="field"><label htmlFor="elabels">Labels</label><input id="elabels" className="input" value={labels} onChange={(e) => setLabels(e.target.value)} placeholder="frontend, side-project" /></div>
+          {error ? <p className="form-error">{error}</p> : null}
+          <button className="btn btn-primary" type="submit" disabled={saving}>{saving ? "Saving" : "Save"}</button>{" "}
+          <button className="btn btn-secondary" type="button" onClick={onDelete}>Delete project</button>
+        </form>
+      </div>
     </div>
   );
 }
