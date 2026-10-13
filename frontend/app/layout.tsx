@@ -4,24 +4,23 @@ import { AuthStatus } from "../components/AuthStatus";
 
 export const metadata: Metadata = {
   title: "Strata",
-  description: "Track personal projects with live GitHub activity"
+  description: "Track personal projects with status, labels, and live activity from public GitHub repos."
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <header style={{ borderBottom: "1px solid #e5e5e5", padding: "12px 24px" }}>
-          <nav style={{ display: "flex", gap: 16, alignItems: "center" }}>
-            <a href="/">Strata</a>
+        <header className="site-header">
+          <nav className="nav" aria-label="Primary">
+            <a className="nav-brand" href="/">Strata</a>
             <a href="/projects">Projects</a>
-            <a href="/projects/new">New</a>
             <a href="/login">Login</a>
-            <a href="/register">Register</a>
+            <a href="/register" className="btn btn-primary">Register</a>
             <AuthStatus />
           </nav>
         </header>
-        <main style={{ padding: 24, maxWidth: 960, margin: "0 auto" }}>{children}</main>
+        <main className="page">{children}</main>
       </body>
     </html>
   );

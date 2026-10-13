@@ -4,19 +4,16 @@ import { StatusBadge } from "./StatusBadge";
 
 export function ProjectCard({ project, labels }: { project: Project; labels: string[] }) {
   return (
-    <div style={{ border: "1px solid #e5e5e5", borderRadius: 8, padding: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Link href={`/projects/${project.id}`}>
-          <strong>{project.name}</strong>
-        </Link>
-        <StatusBadge status={project.status} />
+    <div className="card">
+      <div className="card-kicker">{project.status}</div>
+      <div className="card-title">
+        <Link href={`/projects/${project.id}`}>{project.name}</Link>
       </div>
-      <p>{project.description}</p>
-      <div style={{ display: "flex", gap: 8 }}>
+      <p className="card-body">{project.description}</p>
+      <div className="card-meta" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <StatusBadge status={project.status} />
         {labels.map((l) => (
-          <span key={l} style={{ background: "#f2f2f2", borderRadius: 4, padding: "2px 6px" }}>
-            {l}
-          </span>
+          <span key={l} className="tag tag-neutral">{l}</span>
         ))}
       </div>
     </div>

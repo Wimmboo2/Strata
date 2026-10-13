@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "../../lib/supabase-client";
+import { createClient } from "../../../lib/supabase-client";
 
 function githubUsernameFromUrl(input: string): string | null {
   try {
@@ -34,19 +34,11 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const supabase = createClient();
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password
-      });
+      const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
       if (signUpError) throw signUpError;
       const userId = data.user?.id;
       if (!userId) throw new Error("Registration succeeded but no user id returned");
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: userId,
-        display_name: displayName || null,
-        github_profile_url: githubUrl.trim(),
-        github_username: username
-      });
+      const { error: profileError } = await supabase.from("profiles").insert({ id: userId, display_name: displayName || null, github_profile_url: githubUrl.trim(), github_username: username });
       if (profileError) throw profileError;
       router.push("/projects");
     } catch (err) {
@@ -58,22 +50,18 @@ export default function RegisterPage() {
 
   return (
     <div>
+      <p className="kicker">Join</p>
       <h1>Register</h1>
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 12, maxWidth: 400 }}>
-        <input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <input placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-        <input placeholder="Display name (optional)" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-        <input
-          placeholder="GitHub profile link, e.g. https://github.com/username"
-          value={githubUrl}
-          onChange={(e) => setGithubUrl(e.target.value)}
-          required
-        />
-        {error ? <p style={{ color: "red" }}>{error}</p> : null}
-        <button type="submit" disabled={loading}>
-          {loading ? "Registering" : "Register"}
-        </button>
-      </form>
+      <div className="card" style={{ maxWidth: 480 }}>
+        <form onSubmit={onSubmit}>
+          <div className="field"><label htmlFor="remail">Email</label><input id="remail" className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
+          <div className="field"><label htmlFor="rpass">Password</label><input id="rpass" className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
+          <div className="field"><label htmlFor="rname">Display name</label><input id="rname" className="input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></div>
+          <div className="field"><label htmlFor="rgh">GitHub profile link</label><input id="rgh" className="input" placeholder="https://github.com/username" value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} required /></div>
+          {error ? <p className="form-error">{error}</p> : null}
+          <button className="btn btn-primary btn-block btn" type="submit" disabled={loading}>{loading ? "Registering" : "Register"}</button>
+        </form>
+      </div>
     </div>
   );
 }

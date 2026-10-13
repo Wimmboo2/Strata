@@ -6,45 +6,27 @@ interface FeedProps {
 
 export function ActivityFeed({ commits, pulls, issues }: FeedProps) {
   return (
-    <div style={{ display: "grid", gap: 16 }}>
-      <section>
-        <h3>Commits</h3>
-        {commits.length === 0 ? <p>No commits yet.</p> : null}
-        <ul>
-          {commits.map((c) => (
-            <li key={c.github_sha}>
-              <a href={c.url}>{c.message.split("\n")[0]}</a> {c.author_login ? `by ${c.author_login}` : null}
-            </li>
-          ))}
-        </ul>
+    <div className="grid-3">
+      <section className="card">
+        <div className="card-kicker">Commits</div>
+        <div className="card-title">Latest pushes</div>
+        {commits.length === 0 ? <p className="card-body">No commits yet.</p> : (
+          <ul>{commits.map((c) => (<li key={c.github_sha}><a href={c.url}>{c.message.split("\n")[0]}</a></li>))}</ul>
+        )}
       </section>
-      <section>
-        <h3>Pull requests</h3>
-        {pulls.length === 0 ? <p>No pull requests yet.</p> : null}
-        <ul>
-          {pulls.map((p) => (
-            <li key={p.github_number}>
-              <a href={p.url}>
-                #{p.github_number} {p.title}
-              </a>{" "}
-              [{p.state}]
-            </li>
-          ))}
-        </ul>
+      <section className="card">
+        <div className="card-kicker">Pull requests</div>
+        <div className="card-title">Reviews in flight</div>
+        {pulls.length === 0 ? <p className="card-body">No pull requests yet.</p> : (
+          <ul>{pulls.map((p) => (<li key={p.github_number}><a href={p.url}>#{p.github_number} {p.title}</a> <span className="tag tag-neutral">{p.state}</span></li>))}</ul>
+        )}
       </section>
-      <section>
-        <h3>Issues</h3>
-        {issues.length === 0 ? <p>No issues yet.</p> : null}
-        <ul>
-          {issues.map((i) => (
-            <li key={i.github_number}>
-              <a href={i.url}>
-                #{i.github_number} {i.title}
-              </a>{" "}
-              [{i.state}]
-            </li>
-          ))}
-        </ul>
+      <section className="card">
+        <div className="card-kicker">Issues</div>
+        <div className="card-title">Open questions</div>
+        {issues.length === 0 ? <p className="card-body">No issues yet.</p> : (
+          <ul>{issues.map((i) => (<li key={i.github_number}><a href={i.url}>#{i.github_number} {i.title}</a> <span className="tag tag-neutral">{i.state}</span></li>))}</ul>
+        )}
       </section>
     </div>
   );

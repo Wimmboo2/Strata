@@ -114,12 +114,12 @@ export async function recordInstallation(installationId: number, accountLogin: s
 export async function handleInstallation(payload: { action?: string; installation?: { id: number; account?: { login?: string } } }) {
   const installation = payload.installation;
   if (!installation) return;
-  if (payload.action !== "created" && payload.action !== "new_permissions_accepted") return;
   if (payload.action === "deleted") {
     const supabase = getAdminClient();
     await supabase.from("github_installations").delete().eq("installation_id", installation.id);
     return;
   }
+  if (payload.action !== "created" && payload.action !== "new_permissions_accepted") return;
   // Owner linkage is completed via install callback with state=profile_id.
   // Webhook alone cannot reliably map installation to a Strata user, so store only if already known.
   const supabase = getAdminClient();

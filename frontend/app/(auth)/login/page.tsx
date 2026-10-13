@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "../../lib/supabase-client";
+import { createClient } from "../../../lib/supabase-client";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,15 +28,16 @@ export default function LoginPage() {
 
   return (
     <div>
+      <p className="kicker">Welcome back</p>
       <h1>Login</h1>
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 12, maxWidth: 400 }}>
-        <input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <input placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-        {error ? <p style={{ color: "red" }}>{error}</p> : null}
-        <button type="submit" disabled={loading}>
-          {loading ? "Logging in" : "Login"}
-        </button>
-      </form>
+      <div className="card" style={{ maxWidth: 440 }}>
+        <form onSubmit={onSubmit}>
+          <div className="field"><label htmlFor="lemail">Email</label><input id="lemail" className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
+          <div className="field"><label htmlFor="lpass">Password</label><input id="lpass" className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
+          {error ? <p className="form-error">{error}</p> : null}
+          <button className="btn btn-primary" type="submit" disabled={loading}>{loading ? "Logging in" : "Login"}</button>
+        </form>
+      </div>
     </div>
   );
 }
