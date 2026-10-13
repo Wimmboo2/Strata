@@ -1,20 +1,33 @@
+"use client";
 import Link from "next/link";
-import type { Project } from "../lib/types";
-import { StatusBadge } from "./StatusBadge";
+import type { Project, ProjectStatus } from "../lib/types";
+import { StatusPicker } from "./StatusPicker";
+import { LabelChips } from "./LabelChips";
 
-export function ProjectCard({ project, labels }: { project: Project; labels: string[] }) {
+export function ProjectCard({
+  project,
+  labels,
+  editable,
+  suggestions,
+  onLabelsChange,
+  onStatusChange
+}: {
+  project: Project;
+  labels: string[];
+  editable: boolean;
+  suggestions: string[];
+  onLabelsChange?: (next: string[]) => void;
+  onStatusChange?: (next: ProjectStatus) => void;
+}) {
   return (
     <div className="card">
-      <div className="card-kicker">{project.status}</div>
-      <div className="card-title">
-        <Link href={`/projects/${project.id}`}>{project.name}</Link>
+      <div className="card-title" style={{ marginTop: 0 }}>
+        <Link href={"/projects/" + project.id}>{project.name}</Link>
       </div>
-      <p className="card-body">{project.description}</p>
+      {project.description ? <p className="card-body">{project.description}</p> : null}
       <div className="card-meta" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <StatusBadge status={project.status} />
-        {labels.map((l) => (
-          <span key={l} className="tag tag-neutral">{l}</span>
-        ))}
+        <StatusPicker projectId={project.id} status={project.status} editable={editable} onChange={onStatusChange} />
+        <LabelChips projectId={project.id} labels={labels} editable={editable} suggestions={suggestions} onChange={onLabelsChange} />
       </div>
     </div>
   );

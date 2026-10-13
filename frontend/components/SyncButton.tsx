@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "../lib/supabase-client";
 import { syncRepoActivity, type SyncRepo } from "../lib/github-sync";
 
@@ -15,7 +16,8 @@ function RefreshIcon({ spinning }: { spinning: boolean }) {
   );
 }
 
-export function SyncButton({ repos }: { repos: SyncRepo[] }) {
+export function SyncButton({ repos, onDone }: { repos: SyncRepo[]; onDone?: () => void }) {
+  const router = useRouter();
   const [state, setState] = useState<"idle" | "syncing" | "done" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
 
@@ -30,7 +32,8 @@ export function SyncButton({ repos }: { repos: SyncRepo[] }) {
       }
       setState("done");
       setMessage("Synced just now");
-      window.location.reload();
+      if (onDone) onDone();
+      else router.refresh();
     } catch (err) {
       setState("error");
       setMessage(err instanceof Error ? err.message : "Sync failed");
