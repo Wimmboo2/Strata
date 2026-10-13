@@ -2,41 +2,10 @@ import { createServerSupabaseClient } from "../../../lib/supabase-server";
 import { StatusPicker } from "../../../components/StatusPicker";
 import { LabelChips } from "../../../components/LabelChips";
 import { SyncButton } from "../../../components/SyncButton";
+import { ActivityList, type CommitItem, type PullItem, type IssueItem } from "../../../components/ActivityList";
 import { relativeTime } from "../../../lib/format";
 import type { ProjectStatus } from "../../../lib/types";
 import Link from "next/link";
-
-interface CommitRow {
-  github_sha: string;
-  message: string;
-  author_login: string | null;
-  url: string;
-  committed_at: string;
-}
-
-interface PullRow {
-  github_number: number;
-  title: string;
-  state: string;
-  author_login: string | null;
-  url: string;
-  updated_at_github: string;
-}
-
-interface IssueRow {
-  github_number: number;
-  title: string;
-  state: string;
-  author_login: string | null;
-  url: string;
-  updated_at_github: string;
-}
-
-function stateTagClass(state: string) {
-  if (state === "open") return "tag tag-accent-2";
-  if (state === "merged") return "tag tag-accent";
-  return "tag tag-neutral";
-}
 
 function firstName(message: string) {
   return message.split("\n")[0];
@@ -62,9 +31,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const primary = repos[0] ?? null;
   const repoIds = repos.map((r) => r.id);
 
-  let commits: CommitRow[] = [];
-  let pulls: PullRow[] = [];
-  let issues: IssueRow[] = [];
+  let commits: CommitItem[] = [];
+  let pulls: PullItem[] = [];
+  let issues: IssueItem[] = [];
   let suggestions: string[] = [];
 
   if (repoIds.length > 0) {
@@ -73,9 +42,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       supabase.from("pull_requests").select("*").in("project_repo_id", repoIds).order("updated_at_github", { ascending: false }).limit(100),
       supabase.from("issues").select("*").in("project_repo_id", repoIds).order("updated_at_github", { ascending: false }).limit(100)
     ]);
-    commits = (cRes.data ?? []) as CommitRow[];
-    pulls = (pRes.data ?? []) as PullRow[];
-    issues = (iRes.data ?? []) as IssueRow[];
+    commits = (cRes.data ?? []) as CommitItem[];
+    pulls = (pRes.data ?? []) as PullItem[];
+    issues = (iRes.data ?? []) as IssueItem[];
   }
 
   if (isOwner && sessionUser) {
@@ -148,14 +117,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         {commits.length === 0 ? (
           <p className="card-body">No commits synced yet.</p>
         ) : (
-          <div className="card" style={{ padding: 0 }}>
-            {commits.map((c, idx) => (
-              <div key={c.github_sha} style={{ padding: "14px 22px", borderTop: idx === 0 ? "none" : "1px solid var(--color-divider)" }}>
-                <a href={c.url}>{firstName(c.message)}</a>
-                <div className="card-meta" style={{ marginTop: 2 }}>{(c.author_login ?? "unknown author") + ", " + relativeTime(c.committed_at)}</div>
-              </div>
-            ))}
-          </div>
+          <ActivityList kind="commit" items={commits} />
         )}
       </section>
 
@@ -164,15 +126,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         {pulls.length === 0 ? (
           <p className="card-body">No pull requests synced yet.</p>
         ) : (
-          <div className="card" style={{ padding: 0 }}>
-            {pulls.map((p, idx) => (
-              <div key={p.github_number} style={{ padding: "14px 22px", borderTop: idx === 0 ? "none" : "1px solid var(--color-divider)" }}>
-                <a href={p.url}>{"#" + p.github_number + " " + p.title}</a>{" "}
-                <span className={stateTagClass(p.state)}>{p.state}</span>
-                <div className="card-meta" style={{ marginTop: 2 }}>{(p.author_login ?? "unknown author") + ", " + relativeTime(p.updated_at_github)}</div>
-              </div>
-            ))}
-          </div>
+          <ActivityList kind="pr" items={pulls} />
         )}
       </section>
 
@@ -181,15 +135,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         {issues.length === 0 ? (
           <p className="card-body">No issues synced yet.</p>
         ) : (
-          <div className="card" style={{ padding: 0 }}>
-            {issues.map((i, idx) => (
-              <div key={i.github_number} style={{ padding: "14px 22px", borderTop: idx === 0 ? "none" : "1px solid var(--color-divider)" }}>
-                <a href={i.url}>{"#" + i.github_number + " " + i.title}</a>{" "}
-                <span className={stateTagClass(i.state)}>{i.state}</span>
-                <div className="card-meta" style={{ marginTop: 2 }}>{(i.author_login ?? "unknown author") + ", " + relativeTime(i.updated_at_github)}</div>
-              </div>
-            ))}
-          </div>
+          <ActivityList kind="issue" items={issues} />
         )}
       </section>
     </div>

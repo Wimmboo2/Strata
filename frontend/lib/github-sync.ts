@@ -90,7 +90,7 @@ export async function importProfileRepos(supabase: SupabaseClient, userId: strin
   if (!username) return 0;
 
   const url = "https://api.github.com/users/" + encodeURIComponent(username) + "/repos?per_page=100&sort=updated";
-  const listKey = "strata-repolist:" + username;
+  const listKey = "strata-repolist:v2:" + username;
   let fresh: Record<string, any>[] | null = null;
 
   if (opts?.force) {
@@ -110,16 +110,25 @@ export async function importProfileRepos(supabase: SupabaseClient, userId: strin
 
   const { data: myProjects } = await supabase.from("projects").select("id").eq("owner_id", userId);
   const projectIds = (myProjects ?? []).map((p) => p.id);
-  const existing = new Set<string>();
+  const existing = new Map<string, { id: string; pushed_at: string | null }>();
   if (projectIds.length > 0) {
-    const { data: repoRows } = await supabase.from("project_repos").select("repo_full_name").in("project_id", projectIds);
-    for (const row of repoRows ?? []) existing.add(String(row.repo_full_name).toLowerCase());
+    const { data: repoRows } = await supabase.from("project_repos").select("id,repo_full_name,pushed_at").in("project_id", projectIds);
+    for (const row of repoRows ?? []) {
+      existing.set(String(row.repo_full_name).toLowerCase(), { id: row.id as string, pushed_at: (row.pushed_at as string | null) ?? null });
+    }
   }
 
-  const toAdd = repos.filter((r) => !existing.has(String(r.full_name).toLowerCase()));
   let added = 0;
-  for (const r of toAdd) {
+  for (const r of repos) {
     const fullName = String(r.full_name).toLowerCase();
+    const pushedAt = typeof r.pushed_at === "string" ? r.pushed_at : null;
+    const known = existing.get(fullName);
+    if (known) {
+      if (pushedAt && pushedAt !== known.pushed_at) {
+        await supabase.from("project_repos").update({ pushed_at: pushedAt }).eq("id", known.id);
+      }
+      continue;
+    }
     const { data: created, error } = await supabase
       .from("projects")
       .insert({
@@ -131,7 +140,7 @@ export async function importProfileRepos(supabase: SupabaseClient, userId: strin
       .select()
       .single();
     if (error || !created) continue;
-    const { error: linkError } = await supabase.from("project_repos").insert({ project_id: created.id, repo_full_name: fullName });
+    const { error: linkError } = await supabase.from("project_repos").insert({ project_id: created.id, repo_full_name: fullName, pushed_at: pushedAt });
     if (linkError) {
       await supabase.from("projects").delete().eq("id", created.id);
       continue;

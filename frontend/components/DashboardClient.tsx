@@ -27,12 +27,14 @@ export function DashboardClient({
   initialProjects,
   initialLabelsByProject,
   initialMyRepos,
+  initialRepoActivity,
   initialAuthed,
   initialUserId
 }: {
   initialProjects: Project[];
   initialLabelsByProject: Record<string, string[]>;
   initialMyRepos: SyncRepo[];
+  initialRepoActivity: Record<string, string>;
   initialAuthed: boolean;
   initialUserId: string | null;
 }) {
@@ -40,6 +42,7 @@ export function DashboardClient({
   const [projects, setProjects] = useState(initialProjects);
   const [labelsByProject, setLabelsByProject] = useState(initialLabelsByProject);
   const [myRepos, setMyRepos] = useState(initialMyRepos);
+  const [repoActivity, setRepoActivity] = useState(initialRepoActivity);
   const [status, setStatus] = useState<ProjectStatus | "">("");
   const [label, setLabel] = useState("");
   const [sort, setSort] = useState("updated");
@@ -57,6 +60,9 @@ export function DashboardClient({
   useEffect(() => {
     setMyRepos(initialMyRepos);
   }, [initialMyRepos]);
+  useEffect(() => {
+    setRepoActivity(initialRepoActivity);
+  }, [initialRepoActivity]);
 
   useEffect(() => {
     if (!initialAuthed || !initialUserId || didImport.current) return;
@@ -84,6 +90,7 @@ export function DashboardClient({
         return names.some((n) => n.toLowerCase().includes(label.trim().toLowerCase()));
       });
     const sorted = [...filtered];
+    const activity = (p: Project) => repoActivity[p.id] ?? p.updated_at;
     sorted.sort((a, b) => {
       switch (sort) {
         case "created":
@@ -95,11 +102,11 @@ export function DashboardClient({
         case "name_desc":
           return b.name.localeCompare(a.name);
         default:
-          return b.updated_at.localeCompare(a.updated_at);
+          return activity(b).localeCompare(activity(a));
       }
     });
     return sorted;
-  }, [projects, labelsByProject, status, label, sort]);
+  }, [projects, labelsByProject, status, label, sort, repoActivity]);
 
   const counts = useMemo(
     () => ({

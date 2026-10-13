@@ -31,6 +31,7 @@ create table if not exists project_repos (
   project_id uuid not null references projects(id) on delete cascade,
   repo_full_name text not null,
   installation_id bigint,
+  pushed_at timestamptz,
   created_at timestamptz default now(),
   unique (project_id, repo_full_name)
 );
