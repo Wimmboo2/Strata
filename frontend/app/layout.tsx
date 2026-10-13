@@ -16,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <a className="nav-brand" href="/">Strata</a>
             <a href="/projects">Projects</a>
             <a href="/login">Login</a>
-            <a href="/register" className="btn btn-primary">Register</a>
+            <a href="/register" className="btn btn-primary">Start tracking</a>
             <AuthStatus />
           </nav>
         </header>
