@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Caprasimo:wght@400&family=Figtree:wght@400;600;700&display=swap');
-
 :root {
   color-scheme: light;
   --color-bg: #f5ead8;
@@ -21,8 +19,8 @@
   --panel-3: #eee7db;
   --deco-1: #e1eecc;
   --deco-2: #ffe1d0;
-  --font-heading: "Caprasimo", system-ui, sans-serif;
-  --font-body: "Figtree", system-ui, sans-serif;
+  --font-heading: var(--font-caprasimo, "Caprasimo"), system-ui, sans-serif;
+  --font-body: var(--font-figtree, "Figtree"), system-ui, sans-serif;
   --radius-sm: 8px;
   --radius-md: 16px;
   --radius-lg: 28px;
@@ -248,6 +246,27 @@ select.input { border-radius: 999px; }
 .sync-spin { display: inline-flex; animation: sync-rotate 0.9s linear infinite; }
 
 @keyframes sync-rotate { to { transform: rotate(360deg); } }
+
+.dropdown-wrap { position: relative; display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  background: var(--color-bg);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+  min-width: 240px;
+  box-shadow: var(--shadow-md);
+}
+
+.chip-btn { cursor: pointer; font-family: var(--font-body); }
+
+.tag-outline { background: transparent; border: 1px dashed var(--color-divider); color: var(--color-text); }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none; transition: none; }
