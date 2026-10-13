@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "../../lib/supabase-client";
+import { createClient } from "../../../lib/supabase-client";
 
 function githubUsernameFromUrl(input: string): string | null {
   try {

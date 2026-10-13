@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { createClient } from "../../../lib/supabase-client";
+import { createClient } from "../../../../lib/supabase-client";
 
 export default function EditProjectPage({ params }: { params: { id: string } }) {
   const [name, setName] = useState("");

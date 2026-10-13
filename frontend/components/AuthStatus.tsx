@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { createClient } from "../../lib/supabase-client";
+import { createClient } from "../lib/supabase-client";
 
 export function AuthStatus() {
   const [email, setEmail] = useState<string | null>(null);
