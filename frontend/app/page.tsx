@@ -12,15 +12,15 @@ export default function Home() {
         <a className="btn btn-secondary" href="/register">Start tracking</a>
       </p>
       <div style={{ marginTop: 35, display: "grid", gap: 18 }}>
-        <div className="feature-row" style={{ background: "#f0fae1", borderRadius: 28, padding: 26 }}>
+        <div className="feature-row" style={{ background: "var(--panel-1)", borderRadius: 28, padding: 26 }}>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}><span className="dot" /><h2 style={{ fontSize: 25, margin: 0 }}>Statuses that stay honest</h2></div>
           <p style={{ margin: 0 }}>Every project is building, finished, or paused. Three states, no clutter, easy to scan.</p>
         </div>
-        <div className="feature-row" style={{ background: "#fff2eb", borderRadius: 28, padding: 26 }}>
+        <div className="feature-row" style={{ background: "var(--panel-2)", borderRadius: 28, padding: 26 }}>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}><span className="dot" /><h2 style={{ fontSize: 25, margin: 0 }}>Labels for your own map</h2></div>
           <p style={{ margin: 0 }}>Tag projects frontend, side-project, or ai. Labels stay scoped to your projects.</p>
         </div>
-        <div className="feature-row" style={{ background: "#eee7db", borderRadius: 28, padding: 26 }}>
+        <div className="feature-row" style={{ background: "var(--panel-3)", borderRadius: 28, padding: 26 }}>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}><span className="dot" /><h2 style={{ fontSize: 25, margin: 0 }}>Activity from public repos</h2></div>
           <p style={{ margin: 0 }}>Commits, pull requests, and issues are copied into Strata so pages load fast and history stays put.</p>
         </div>
