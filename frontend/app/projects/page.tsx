@@ -12,12 +12,15 @@ export default function ProjectsPage() {
   const [label, setLabel] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authed, setAuthed] = useState(false);
 
   useEffect(() => {
     async function load() {
       try {
         setLoading(true);
         const supabase = createClient();
+        const { data: userData } = await supabase.auth.getUser();
+        setAuthed(!!userData.user);
         let query = supabase.from("projects").select("*").order("updated_at", { ascending: false });
         if (status) query = query.eq("status", status);
         const { data, error: qError } = await query;
@@ -55,7 +58,10 @@ export default function ProjectsPage() {
       <FilterBar status={status} label={label} onStatus={setStatus} onLabel={setLabel} />
       {error ? <p className="form-error">{error}</p> : null}
       {loading ? <div className="grid-3">{[0, 1, 2].map((i) => (<div key={i} className="card"><div className="card-title">Loading</div></div>))}</div> : null}
-      {!loading && filtered.length === 0 ? (
+      {!loading && filtered.length === 0 && !authed ? (
+        <div className="card"><div className="card-title">No projects yet</div><p className="card-body">Register to start tracking your own projects.</p><p><a className="btn btn-primary" href="/register">Register to start tracking</a></p></div>
+      ) : null}
+      {!loading && filtered.length === 0 && authed ? (
         <div className="card"><div className="card-title">No projects yet</div><p className="card-body">Create your first project to start tracking.</p><p><a className="btn btn-primary" href="/projects/new">New project</a></p></div>
       ) : null}
       <div className="grid-3">
