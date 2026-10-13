@@ -245,6 +245,10 @@ select.input { border-radius: 999px; }
 
 .form-error { color: var(--accent-700); font-size: 13px; }
 
+.sync-spin { display: inline-flex; animation: sync-rotate 0.9s linear infinite; }
+
+@keyframes sync-rotate { to { transform: rotate(360deg); } }
+
 @media (prefers-reduced-motion: reduce) {
   * { animation: none; transition: none; }
 }

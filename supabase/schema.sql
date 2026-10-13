@@ -136,13 +136,36 @@ drop policy if exists "project_repos_public_read" on project_repos;
 create policy "project_repos_public_read" on project_repos
   for select using (true);
 
--- activity tables: public read only, writes via service role
+-- activity tables: public read only; owner writes go through the *_owner_write policies below (used by the dashboard Sync button)
 drop policy if exists "commits_public_read" on commits;
 create policy "commits_public_read" on commits for select using (true);
 drop policy if exists "pull_requests_public_read" on pull_requests;
 create policy "pull_requests_public_read" on pull_requests for select using (true);
 drop policy if exists "issues_public_read" on issues;
 create policy "issues_public_read" on issues for select using (true);
+
+-- activity tables: owners may insert/update rows for their own repos
+drop policy if exists "commits_owner_write" on commits;
+create policy "commits_owner_write" on commits
+  for all using (
+    exists (select 1 from project_repos join projects on projects.id = project_repos.project_id where project_repos.id = commits.project_repo_id and projects.owner_id = auth.uid())
+  ) with check (
+    exists (select 1 from project_repos join projects on projects.id = project_repos.project_id where project_repos.id = commits.project_repo_id and projects.owner_id = auth.uid())
+  );
+drop policy if exists "pull_requests_owner_write" on pull_requests;
+create policy "pull_requests_owner_write" on pull_requests
+  for all using (
+    exists (select 1 from project_repos join projects on projects.id = project_repos.project_id where project_repos.id = pull_requests.project_repo_id and projects.owner_id = auth.uid())
+  ) with check (
+    exists (select 1 from project_repos join projects on projects.id = project_repos.project_id where project_repos.id = pull_requests.project_repo_id and projects.owner_id = auth.uid())
+  );
+drop policy if exists "issues_owner_write" on issues;
+create policy "issues_owner_write" on issues
+  for all using (
+    exists (select 1 from project_repos join projects on projects.id = project_repos.project_id where project_repos.id = issues.project_repo_id and projects.owner_id = auth.uid())
+  ) with check (
+    exists (select 1 from project_repos join projects on projects.id = project_repos.project_id where project_repos.id = issues.project_repo_id and projects.owner_id = auth.uid())
+  );
 
 -- github_installations: owner only, no public read
 drop policy if exists "installations_owner_all" on github_installations;
