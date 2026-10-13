@@ -1,7 +1,9 @@
 import { createServerSupabaseClient } from "../../../lib/supabase-server";
-import { StatusBadge } from "../../../components/StatusBadge";
+import { StatusPicker } from "../../../components/StatusPicker";
+import { LabelChips } from "../../../components/LabelChips";
 import { SyncButton } from "../../../components/SyncButton";
 import { relativeTime } from "../../../lib/format";
+import type { ProjectStatus } from "../../../lib/types";
 import Link from "next/link";
 
 interface CommitRow {
@@ -42,27 +44,47 @@ function firstName(message: string) {
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
   const supabase = createServerSupabaseClient();
-  const { data: project } = await supabase.from("projects").select("*").eq("id", params.id).single();
+
+  const [projectRes, sessionRes, labelsRes, reposRes] = await Promise.all([
+    supabase.from("projects").select("*").eq("id", params.id).single(),
+    supabase.auth.getSession(),
+    supabase.from("labels").select("*").eq("project_id", params.id),
+    supabase.from("project_repos").select("*").eq("project_id", params.id)
+  ]);
+
+  const project = projectRes.data;
   if (!project) return <p>Project not found.</p>;
 
-  const { data: userData } = await supabase.auth.getUser();
-  const isOwner = userData.user?.id === project.owner_id;
-
-  const { data: labels } = await supabase.from("labels").select("*").eq("project_id", params.id);
-  const { data: repos } = await supabase.from("project_repos").select("*").eq("project_id", params.id);
-  const primary = (repos ?? [])[0] ?? null;
-  const repoIds = (repos ?? []).map((r) => r.id);
+  const sessionUser = sessionRes.data.session?.user ?? null;
+  const isOwner = sessionUser?.id === project.owner_id;
+  const labels = (labelsRes.data ?? []) as { id: string; name: string }[];
+  const repos = (reposRes.data ?? []) as { id: string; repo_full_name: string }[];
+  const primary = repos[0] ?? null;
+  const repoIds = repos.map((r) => r.id);
 
   let commits: CommitRow[] = [];
   let pulls: PullRow[] = [];
   let issues: IssueRow[] = [];
+  let suggestions: string[] = [];
+
   if (repoIds.length > 0) {
-    const { data: c } = await supabase.from("commits").select("*").in("project_repo_id", repoIds).order("committed_at", { ascending: false }).limit(100);
-    const { data: p } = await supabase.from("pull_requests").select("*").in("project_repo_id", repoIds).order("updated_at_github", { ascending: false }).limit(100);
-    const { data: i } = await supabase.from("issues").select("*").in("project_repo_id", repoIds).order("updated_at_github", { ascending: false }).limit(100);
-    commits = (c ?? []) as CommitRow[];
-    pulls = (p ?? []) as PullRow[];
-    issues = (i ?? []) as IssueRow[];
+    const [cRes, pRes, iRes] = await Promise.all([
+      supabase.from("commits").select("*").in("project_repo_id", repoIds).order("committed_at", { ascending: false }).limit(100),
+      supabase.from("pull_requests").select("*").in("project_repo_id", repoIds).order("updated_at_github", { ascending: false }).limit(100),
+      supabase.from("issues").select("*").in("project_repo_id", repoIds).order("updated_at_github", { ascending: false }).limit(100)
+    ]);
+    commits = (cRes.data ?? []) as CommitRow[];
+    pulls = (pRes.data ?? []) as PullRow[];
+    issues = (iRes.data ?? []) as IssueRow[];
+  }
+
+  if (isOwner && sessionUser) {
+    const { data: ownProjects } = await supabase.from("projects").select("id").eq("owner_id", sessionUser.id);
+    const ownIds = (ownProjects ?? []).map((p) => p.id);
+    if (ownIds.length > 0) {
+      const { data: ownLabels } = await supabase.from("labels").select("name").in("project_id", ownIds);
+      suggestions = Array.from(new Set((ownLabels ?? []).map((l) => l.name as string))).sort();
+    }
   }
 
   const latestCommit = commits[0] ?? null;
@@ -81,17 +103,15 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             <a href={"https://github.com/" + primary.repo_full_name} style={{ textDecoration: "none" }}>{primary.repo_full_name}</a>
           ) : project.name}
         </h1>
-        <StatusBadge status={project.status} />
+        <StatusPicker projectId={project.id} status={project.status as ProjectStatus} editable={isOwner} />
       </div>
       {project.description ? <p>{project.description}</p> : null}
-      {(labels ?? []).length > 0 ? (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {(labels ?? []).map((l: { id: string; name: string }) => (<span key={l.id} className="tag tag-neutral">{l.name}</span>))}
-        </div>
-      ) : null}
+      <div className="dropdown-wrap">
+        <LabelChips projectId={project.id} labels={labels.map((l) => l.name)} editable={isOwner} suggestions={suggestions} />
+      </div>
       {isOwner ? (
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <Link className="btn btn-secondary" href={"/projects/" + params.id + "/edit"}>Edit</Link>
+          <Link className="btn btn-secondary" href={"/projects/" + params.id + "/edit"}>Edit details</Link>
           {primary ? <SyncButton repos={[{ id: primary.id, repo_full_name: primary.repo_full_name }]} /> : null}
         </div>
       ) : null}

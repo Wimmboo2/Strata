@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "../../../../lib/supabase-client";
 
 export default function EditProjectPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<"building" | "finished" | "paused">("building");
@@ -45,7 +47,8 @@ export default function EditProjectPage({ params }: { params: { id: string } }) 
         const { error: lError } = await supabase.from("labels").insert(names.map((n) => ({ project_id: params.id, name: n })));
         if (lError) throw lError;
       }
-      window.location.href = `/projects/${params.id}`;
+      router.push("/projects/" + params.id);
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {
@@ -61,7 +64,8 @@ export default function EditProjectPage({ params }: { params: { id: string } }) 
       setError(error.message);
       return;
     }
-    window.location.href = "/projects";
+    router.push("/projects");
+    router.refresh();
   }
 
   if (loading) return <p>Loading.</p>;

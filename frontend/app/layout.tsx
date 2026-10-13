@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Caprasimo, Figtree } from "next/font/google";
 import { AuthStatus } from "../components/AuthStatus";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { createServerSupabaseClient } from "../lib/supabase-server";
+
+const caprasimo = Caprasimo({ weight: "400", subsets: ["latin"], variable: "--font-caprasimo", display: "swap" });
+const figtree = Figtree({ weight: ["400", "600", "700"], subsets: ["latin"], variable: "--font-figtree", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Strata",
@@ -15,13 +19,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   let authed = false;
   try {
     const supabase = createServerSupabaseClient();
-    const { data } = await supabase.auth.getUser();
-    authed = !!data.user;
+    const { data } = await supabase.auth.getSession();
+    authed = !!data.session;
   } catch {
     authed = false;
   }
   return (
-    <html lang="en">
+    <html lang="en" className={caprasimo.variable + " " + figtree.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
       </head>
