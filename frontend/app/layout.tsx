@@ -28,7 +28,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <header className="site-header">
           <nav className="nav" aria-label="Primary">
-            <a className="nav-brand" href="/">Strata</a>
+            <a className="nav-brand" href={authed ? "/projects" : "/"}>Strata</a>
             {authed ? (
               <a href="/projects">Dashboard</a>
             ) : (
