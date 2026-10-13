@@ -15,7 +15,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <nav className="nav" aria-label="Primary">
             <a className="nav-brand" href="/">Strata</a>
             <a href="/projects">Projects</a>
-            <a href="/projects/new">New</a>
             <a href="/login">Login</a>
             <a href="/register" className="btn btn-primary">Register</a>
             <AuthStatus />
