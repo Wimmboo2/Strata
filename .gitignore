@@ -1,3 +1,8 @@
+# Internal planning docs: keep out of the repo
+SETUP.md
+idea.md
+agents.md
+
 # Secrets: never commit real env files
 .env
 .env.local
