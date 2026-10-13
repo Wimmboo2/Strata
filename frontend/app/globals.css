@@ -14,9 +14,9 @@
   --accent-100: #fff2eb;
   --sage-100: #f0fae1;
   --sage-700: #56633f;
-  --panel-1: #f0fae1;
-  --panel-2: #fff2eb;
-  --panel-3: #eee7db;
+  --panel-1: #ffe1d0;
+  --panel-2: #ebddc5;
+  --panel-3: #dcd3c4;
   --deco-1: #e1eecc;
   --deco-2: #ffe1d0;
   --font-heading: var(--font-caprasimo, "Caprasimo"), system-ui, sans-serif;
@@ -236,7 +236,7 @@ select.input { border-radius: 999px; }
 }
 
 .tint-patch {
-  background: var(--sage-100);
+  background: var(--panel-1);
   border-radius: calc(2 * var(--radius-lg));
   padding: 35px;
 }
@@ -288,9 +288,9 @@ html[data-theme="dark"] {
   --accent-100: #2b2650;
   --sage-100: #232a45;
   --sage-700: #b9c6a5;
-  --panel-1: #242a45;
-  --panel-2: #2b2547;
-  --panel-3: #22283a;
+  --panel-1: #2b2650;
+  --panel-2: #20233a;
+  --panel-3: #343a55;
   --deco-1: #2b3358;
   --deco-2: #3a2d55;
 }
