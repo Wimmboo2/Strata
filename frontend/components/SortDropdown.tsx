@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { useDropdownFlip } from "../lib/use-dropdown-flip";
 
 export interface SortOption {
   value: string;
@@ -37,7 +38,7 @@ export function SortDropdown({
   ariaLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLSpanElement>(null);
+  const { ref, up, measure } = useDropdownFlip<HTMLSpanElement>(300);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -45,9 +46,14 @@ export function SortDropdown({
     }
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
+  }, [ref]);
 
   const current = options.find((o) => o.value === value);
+
+  function toggle() {
+    measure();
+    setOpen((o) => !o);
+  }
 
   return (
     <span className="dropdown-wrap" ref={ref}>
@@ -55,7 +61,7 @@ export function SortDropdown({
         type="button"
         className="input chip-btn"
         style={{ width: "auto", display: "inline-flex", alignItems: "center", justifyContent: "space-between", gap: 10, minWidth: 200 }}
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggle}
         aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -64,7 +70,7 @@ export function SortDropdown({
         <Chevron open={open} />
       </button>
       {open ? (
-        <span className="dropdown" role="listbox" style={{ minWidth: 220 }}>
+        <span className={"dropdown" + (up ? " dropdown-up" : "")} role="listbox" style={{ minWidth: 220 }}>
           {options.map((o) => (
             <button
               key={o.value}
