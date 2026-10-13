@@ -18,9 +18,7 @@ export function AddRepoForm({ projectId }: { projectId: string }) {
     setLoading(true);
     try {
       const supabase = createClient();
-      const { error: rError } = await supabase
-        .from("project_repos")
-        .insert({ project_id: projectId, repo_full_name: normalized });
+      const { error: rError } = await supabase.from("project_repos").insert({ project_id: projectId, repo_full_name: normalized });
       if (rError) throw rError;
       window.location.reload();
     } catch (err) {
@@ -31,10 +29,10 @@ export function AddRepoForm({ projectId }: { projectId: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} style={{ display: "flex", gap: 8, marginTop: 8 }}>
-      <input placeholder="owner/repo" value={repo} onChange={(e) => setRepo(e.target.value)} />
-      <button type="submit" disabled={loading}>{loading ? "Adding" : "Add repo"}</button>
-      {error ? <span style={{ color: "red" }}>{error}</span> : null}
+    <form onSubmit={onSubmit} style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+      <input className="input" style={{ maxWidth: 260 }} placeholder="owner/repo" value={repo} onChange={(e) => setRepo(e.target.value)} aria-label="Public repo full name" />
+      <button className="btn btn-secondary" type="submit" disabled={loading}>{loading ? "Adding" : "Add repo"}</button>
+      {error ? <span className="form-error">{error}</span> : null}
     </form>
   );
 }

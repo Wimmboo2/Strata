@@ -14,16 +14,14 @@ export function FilterBar({
   onLabel: (v: string) => void;
 }) {
   return (
-    <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-      <select value={status} onChange={(e) => onStatus(e.target.value as ProjectStatus | "")}>
+    <div style={{ display: "flex", gap: 12, marginBottom: 18, flexWrap: "wrap" }}>
+      <select className="input" style={{ maxWidth: 220 }} value={status} onChange={(e) => onStatus(e.target.value as ProjectStatus | "")} aria-label="Filter by status">
         <option value="">All statuses</option>
         {PROJECT_STATUSES.map((s) => (
-          <option key={s} value={s}>
-            {s}
-          </option>
+          <option key={s} value={s}>{s}</option>
         ))}
       </select>
-      <input placeholder="Filter by label" value={label} onChange={(e) => onLabel(e.target.value)} />
+      <input className="input" style={{ maxWidth: 260 }} placeholder="Filter by label" value={label} onChange={(e) => onLabel(e.target.value)} aria-label="Filter by label" />
     </div>
   );
 }

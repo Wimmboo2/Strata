@@ -14,9 +14,10 @@ export function AuthStatus() {
   }, []);
   if (!email) return null;
   return (
-    <span style={{ marginLeft: "auto" }}>
-      {email}{" "}
+    <span style={{ marginLeft: "auto", display: "inline-flex", gap: 10, alignItems: "center" }}>
+      <span className="tag tag-neutral">{email}</span>
       <button
+        className="btn btn-ghost"
         onClick={async () => {
           const supabase = createClient();
           await supabase.auth.signOut();
