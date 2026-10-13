@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: strata-backend
+    env: node
+    plan: free
+    buildCommand: npm install && npm run typecheck
+    startCommand: npm start
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: GITHUB_WEBHOOK_SECRET
+        sync: false
+      - key: SYNC_CRON_SECRET
+        sync: false
+cronJobs:
+  - name: strata-sync
+    schedule: "*/30 * * * *"
+    command: npm run sync
