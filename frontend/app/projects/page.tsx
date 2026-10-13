@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "../../lib/supabase-client";
 import type { Project, ProjectStatus } from "../../lib/types";
 import { ProjectCard } from "../../components/ProjectCard";
+import { SyncButton, type SyncRepo } from "../../components/SyncButton";
 
 const TABS: { value: ProjectStatus | ""; label: string }[] = [
   { value: "", label: "All" },
@@ -19,6 +20,7 @@ export default function ProjectsPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [authed, setAuthed] = useState(false);
+  const [myRepos, setMyRepos] = useState<SyncRepo[]>([]);
 
   useEffect(() => {
     async function load() {
@@ -27,6 +29,7 @@ export default function ProjectsPage() {
         const supabase = createClient();
         const { data: userData } = await supabase.auth.getUser();
         setAuthed(!!userData.user);
+        const userId = userData.user?.id ?? null;
         let query = supabase.from("projects").select("*").order("updated_at", { ascending: false });
         if (status) query = query.eq("status", status);
         const { data, error: qError } = await query;
@@ -41,6 +44,13 @@ export default function ProjectsPage() {
             grouped[row.project_id].push(row.name);
           }
           setLabelsByProject(grouped);
+        }
+        if (userId && data && data.length > 0) {
+          const myIds = data.filter((p) => p.owner_id === userId).map((p) => p.id);
+          if (myIds.length > 0) {
+            const { data: repoRows } = await supabase.from("project_repos").select("id,repo_full_name").in("project_id", myIds);
+            setMyRepos(((repoRows ?? []) as SyncRepo[]).filter((r) => /^[a-z0-9_.-]+\\/[a-z0-9_.-]+$/i.test(r.repo_full_name)));
+          }
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Load failed");
@@ -103,7 +113,12 @@ export default function ProjectsPage() {
       {error ? <p className="form-error">{error}</p> : null}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <span className="card-meta" style={{ marginTop: 0 }}>{loading ? "" : `${filtered.length} project${filtered.length === 1 ? "" : "s"}`}</span>
-        {authed && !loading ? <a className="btn btn-primary" href="/projects/new">+ New project</a> : null}
+        {authed && !loading ? (
+          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <SyncButton repos={myRepos} />
+            <a className="btn btn-primary" href="/projects/new">+ New project</a>
+          </span>
+        ) : null}
       </div>
       {loading ? <div className="grid-3">{[0, 1, 2].map((i) => (<div key={i} className="card"><div className="card-title">Loading</div></div>))}</div> : null}
       {!loading && filtered.length === 0 && !authed ? (

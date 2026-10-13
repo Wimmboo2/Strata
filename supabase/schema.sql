@@ -136,7 +136,7 @@ drop policy if exists "project_repos_public_read" on project_repos;
 create policy "project_repos_public_read" on project_repos
   for select using (true);
 
--- activity tables: public read only, writes via service role
+-- activity tables: public read only; owner writes go through the *_owner_write policies below (used by the dashboard Sync button)
 drop policy if exists "commits_public_read" on commits;
 create policy "commits_public_read" on commits for select using (true);
 drop policy if exists "pull_requests_public_read" on pull_requests;
