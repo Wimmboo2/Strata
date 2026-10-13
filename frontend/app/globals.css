@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Caprasimo:wght@400&family=Figtree:wght@400;600;700&display=swap');
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   --color-bg: #f5ead8;
   --color-surface: #ebddc5;
   --color-text: #201e1d;
@@ -249,30 +249,8 @@ select.input { border-radius: 999px; }
   * { animation: none; transition: none; }
 }
 
-/* Dark mode: Nocturne colors only. Shapes, fonts, and layout stay Organic. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --color-bg: #161826;
-    --color-surface: #20233a;
-    --color-text: #e9e9ed;
-    --color-accent: #9184d9;
-    --color-divider: rgb(233 233 237 / 16%);
-    --neutral-100: #20233a;
-    --neutral-200: #2a2e45;
-    --neutral-300: #343a55;
-    --accent-600: #9184d9;
-    --accent-700: #c9bef2;
-    --accent-100: #2b2650;
-    --sage-100: #232a45;
-    --sage-700: #b9c6a5;
-    --panel-1: #242a45;
-    --panel-2: #2b2547;
-    --panel-3: #22283a;
-    --deco-1: #2b3358;
-    --deco-2: #3a2d55;
-  }
-}
-
+/* Dark mode: Nocturne colors only. Shapes, fonts, and layout stay Organic.
+   Light is the default. Dark applies only when chosen with the toggle. */
 html[data-theme="dark"] {
   --color-bg: #161826;
   --color-surface: #20233a;
@@ -306,11 +284,3 @@ html[data-theme="dark"] .btn-primary {
 html[data-theme="dark"] .btn-primary:hover { background: #a89ae0; }
 html[data-theme="dark"] .btn-primary:focus-visible { outline-color: #c9bef2; }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .btn-primary {
-    background: #9184d9;
-    color: #161826;
-  }
-  :root:not([data-theme="light"]) .btn-primary:hover { background: #a89ae0; }
-  :root:not([data-theme="light"]) .btn-primary:focus-visible { outline-color: #c9bef2; }
-}
