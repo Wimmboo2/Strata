@@ -17,8 +17,13 @@
   --panel-1: #ffe1d0;
   --panel-2: #ebddc5;
   --panel-3: #dcd3c4;
+  --panel-1: #ffe1d0;
+  --panel-2: #ebddc5;
+  --panel-3: #dcd3c4;
   --deco-1: #e1eecc;
   --deco-2: #ffe1d0;
+  --font-heading: var(--font-caprasimo, "Caprasimo"), system-ui, sans-serif;
+  --font-body: var(--font-figtree, "Figtree"), system-ui, sans-serif;
   --font-heading: var(--font-caprasimo, "Caprasimo"), system-ui, sans-serif;
   --font-body: var(--font-figtree, "Figtree"), system-ui, sans-serif;
   --radius-sm: 8px;
@@ -237,6 +242,7 @@ select.input { border-radius: 999px; }
 
 .tint-patch {
   background: var(--panel-1);
+  background: var(--panel-1);
   border-radius: calc(2 * var(--radius-lg));
   padding: 35px;
 }
@@ -294,6 +300,9 @@ html[data-theme="dark"] {
   --accent-100: #2b2650;
   --sage-100: #232a45;
   --sage-700: #b9c6a5;
+  --panel-1: #2b2650;
+  --panel-2: #20233a;
+  --panel-3: #343a55;
   --panel-1: #2b2650;
   --panel-2: #20233a;
   --panel-3: #343a55;
