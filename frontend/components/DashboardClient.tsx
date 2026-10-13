@@ -5,6 +5,7 @@ import { createClient } from "../lib/supabase-client";
 import type { Project, ProjectStatus } from "../lib/types";
 import { ProjectCard } from "./ProjectCard";
 import { SyncButton } from "./SyncButton";
+import { SortDropdown } from "./SortDropdown";
 import { importProfileRepos, type SyncRepo } from "../lib/github-sync";
 
 const TABS: { value: ProjectStatus | ""; label: string }[] = [
@@ -74,15 +75,6 @@ export function DashboardClient({
     })();
   }, [initialAuthed, initialUserId, router]);
 
-  const suggestions = useMemo(() => {
-    const own = new Set(projects.filter((p) => p.owner_id === initialUserId).map((p) => p.id));
-    const names = new Set<string>();
-    for (const [pid, list] of Object.entries(labelsByProject)) {
-      if (own.has(pid)) for (const n of list) names.add(n);
-    }
-    return Array.from(names).sort();
-  }, [projects, labelsByProject, initialUserId]);
-
   const visible = useMemo(() => {
     const filtered = projects
       .filter((p) => !status || p.status === status)
@@ -139,10 +131,6 @@ export function DashboardClient({
     }
   }
 
-  function handleLabelsChange(projectId: string, next: string[]) {
-    setLabelsByProject((prev) => ({ ...prev, [projectId]: next }));
-  }
-
   function handleStatusChange(projectId: string, next: ProjectStatus) {
     setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, status: next, updated_at: new Date().toISOString() } : p)));
   }
@@ -185,11 +173,7 @@ export function DashboardClient({
           ))}
         </div>
         <input className="input" style={{ maxWidth: 200 }} placeholder="Filter by label" value={label} onChange={(e) => setLabel(e.target.value)} aria-label="Filter by label" />
-        <select className="input" style={{ maxWidth: 190 }} value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort projects">
-          {SORTS.map((s) => (
-            <option key={s.value} value={s.value}>{s.label}</option>
-          ))}
-        </select>
+        <SortDropdown value={sort} options={SORTS} onChange={setSort} ariaLabel="Sort projects" />
       </div>
       {error ? <p className="form-error">{error}</p> : null}
       {notice ? <p className="card-meta" style={{ marginBottom: 12 }}>{notice}</p> : null}
@@ -217,10 +201,7 @@ export function DashboardClient({
           <ProjectCard
             key={p.id}
             project={p}
-            labels={labelsByProject[p.id] ?? []}
             editable={authed && p.owner_id === initialUserId}
-            suggestions={suggestions}
-            onLabelsChange={(next) => handleLabelsChange(p.id, next)}
             onStatusChange={(next) => handleStatusChange(p.id, next)}
           />
         ))}

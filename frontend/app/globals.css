@@ -17,13 +17,9 @@
   --panel-1: #ffe1d0;
   --panel-2: #ebddc5;
   --panel-3: #dcd3c4;
-  --panel-1: #ffe1d0;
-  --panel-2: #ebddc5;
-  --panel-3: #dcd3c4;
+  --dropdown-bg: #fdf7ea;
   --deco-1: #e1eecc;
   --deco-2: #ffe1d0;
-  --font-heading: var(--font-caprasimo, "Caprasimo"), system-ui, sans-serif;
-  --font-body: var(--font-figtree, "Figtree"), system-ui, sans-serif;
   --font-heading: var(--font-caprasimo, "Caprasimo"), system-ui, sans-serif;
   --font-body: var(--font-figtree, "Figtree"), system-ui, sans-serif;
   --radius-sm: 8px;
@@ -173,6 +169,9 @@ a { color: var(--accent-700); }
   margin: 4px 0 8px;
 }
 
+.card-title a { text-decoration: none; }
+.card-title a:hover { color: var(--accent-600); }
+
 .card-body { font-size: 13px; opacity: 0.8; }
 .card-meta { font-size: 13px; opacity: 0.7; margin-top: 10px; }
 
@@ -242,7 +241,6 @@ select.input { border-radius: 999px; }
 
 .tint-patch {
   background: var(--panel-1);
-  background: var(--panel-1);
   border-radius: calc(2 * var(--radius-lg));
   padding: 35px;
 }
@@ -260,14 +258,14 @@ select.input { border-radius: 999px; }
   top: calc(100% + 6px);
   left: 0;
   z-index: 30;
-  background: var(--color-bg);
+  background: var(--dropdown-bg);
   border: 1px solid var(--color-divider);
   border-radius: var(--radius-md);
   padding: 12px;
   display: grid;
   gap: 8px;
   min-width: 240px;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
 }
 
 .chip-btn { cursor: pointer; font-family: var(--font-body); }
@@ -303,9 +301,7 @@ html[data-theme="dark"] {
   --panel-1: #2b2650;
   --panel-2: #20233a;
   --panel-3: #343a55;
-  --panel-1: #2b2650;
-  --panel-2: #20233a;
-  --panel-3: #343a55;
+  --dropdown-bg: #262b45;
   --deco-1: #2b3358;
   --deco-2: #3a2d55;
 }
