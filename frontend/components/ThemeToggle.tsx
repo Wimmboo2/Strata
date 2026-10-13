@@ -32,8 +32,6 @@ export function ThemeToggle() {
     const stored = localStorage.getItem("strata-theme");
     if (stored === "dark" || stored === "light") {
       setTheme(stored);
-    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-      setTheme("dark");
     }
   }, []);
 
