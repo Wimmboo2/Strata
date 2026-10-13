@@ -49,7 +49,7 @@ export default function ProjectsPage() {
           const myIds = data.filter((p) => p.owner_id === userId).map((p) => p.id);
           if (myIds.length > 0) {
             const { data: repoRows } = await supabase.from("project_repos").select("id,repo_full_name").in("project_id", myIds);
-            setMyRepos(((repoRows ?? []) as SyncRepo[]).filter((r) => /^[a-z0-9_.-]+\\/[a-z0-9_.-]+$/i.test(r.repo_full_name)));
+            setMyRepos(((repoRows ?? []) as SyncRepo[]).filter((r) => r.repo_full_name.split("/").length === 2));
           }
         }
       } catch (err) {
