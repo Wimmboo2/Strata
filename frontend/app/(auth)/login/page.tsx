@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../../lib/supabase-client";
-import { clearPendingProfile, githubUsernameFromUrl, readPendingProfile } from "../register/page";
+import { clearPendingProfile, githubUsernameFromUrl, readPendingProfile } from "../../../lib/pending-profile";
 
 export default function LoginPage() {
   const router = useRouter();
