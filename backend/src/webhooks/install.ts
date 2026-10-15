@@ -11,43 +11,66 @@ export function isValidSetupState(value: unknown): value is string {
 /**
  * Whether the GitHub installation flow may operate at all.
  *
- * Currently ALWAYS false: no GitHub App exists for this project, so the
- * complete verification flow (App JWT check + verified GitHub identity
- * check in verifyInstallationWithGitHub below) cannot run. Both the setup
- * and callback endpoints fail closed while this returns false.
+ * True only when App credentials are configured (GITHUB_APP_ID plus
+ * GITHUB_APP_PRIVATE_KEY). The callback additionally requires
+ * verifyInstallationWithGitHub to pass, so credentials alone never
+ * authorize a binding on their own.
  */
 export function isGithubInstallEnabled(): boolean {
-  return false;
+  return Boolean(process.env.GITHUB_APP_ID) && Boolean(process.env.GITHUB_APP_PRIVATE_KEY);
+}
+
+function base64url(input: Buffer | string): string {
+  return Buffer.from(input)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+/** Short-lived App JWT for GitHub API authentication (node:crypto only). */
+function mintAppJwt(): string {
+  const appId = process.env.GITHUB_APP_ID ?? "";
+  // Tolerate escaped newlines in case the key was pasted with \n literals;
+  // a real PEM body is base64, which never contains a backslash, so this
+  // replacement cannot corrupt a valid key.
+  const privateKey = (process.env.GITHUB_APP_PRIVATE_KEY ?? "").replace(/\\n/g, "\n");
+  if (!appId || !privateKey) throw new Error("github app credentials missing");
+  const now = Math.floor(Date.now() / 1000);
+  const data =
+    base64url(JSON.stringify({ alg: "RS256", typ: "JWT" })) +
+    "." +
+    base64url(JSON.stringify({ iat: now - 60, exp: now + 600, iss: appId }));
+  const signer = crypto.createSign("RSA-SHA256");
+  signer.update(data);
+  return data + "." + base64url(signer.sign(privateKey));
 }
 
 /**
- * Verify an installation against GitHub. NOT IMPLEMENTED — this is the gate
- * every install link must pass before it is trusted.
+ * Verify an installation belongs to OUR GitHub App. This is the gate every
+ * install link must pass before it is trusted.
  *
  * Four outcomes, and callers must handle each differently:
- * - "verified": the installation belongs to our App AND its account matches
- *   the authenticated GitHub identity of the linking user. Safe to bind.
- * - "rejected": definitive negative (unknown installation, wrong App,
- *   account mismatch). The token stays consumed; the caller fails closed.
- * - "transient": network timeout, DNS failure, or GitHub 5xx — the check
- *   itself could not run. The caller MUST release the token claim so the
- *   same state can be retried; never burn a token on an inconclusive check.
+ * - "verified": the installation belongs to our App. Safe to bind, with
+ *   the caveat below: this alone does NOT prove the Strata user owns the
+ *   GitHub account (see deferred identity step).
+ * - "rejected": definitive negative (unknown installation, wrong App).
+ *   The token stays consumed; the caller fails closed.
+ * - "transient": network timeout, DNS failure, GitHub 5xx, or broken local
+ *   credentials — the check itself could not run. The caller MUST release
+ *   the token claim so the same state can be retried; never burn a token
+ *   on an inconclusive check.
  * - "unavailable": integration not configured. Fail closed, touch nothing.
  *
- * Minimum implementation required to enable the feature (all four parts):
- * 1. App ownership: mint a GitHub App JWT (RS256 with GITHUB_APP_ID and the
- *    App private key, expiry <= 10 minutes; node:crypto only, no new
- *    dependency) and GET https://api.github.com/app/installations/{id}.
- *    Reject unless the response identifies OUR configured App.
- * 2. User-installation association: confirm the authenticated GitHub user is
- *    authorized for that installation using GitHub's documented
- *    authorization flow (GitHub OAuth login for the Strata user, then check
- *    the installation's account against it).
- * 3. Strata authorization: the verified GitHub login must belong to the
- *    Strata profile that minted the setup state. Matching the installation's
- *    account login against the self-asserted profile.github_username field
- *    alone does NOT establish ownership and must never be the check.
- * 4. Replay safety is already handled by the single-use state token; keep it.
+ * Deferred until a GitHub OAuth login flow exists: binding the verified
+ * installation account to the Strata user's *verified* GitHub identity.
+ * Matching against the self-asserted profile.github_username field alone
+ * does NOT establish ownership and must never be the check. Until then, a
+ * signed-in Strata user could bind someone else's still-unbound
+ * installation of our App to their own profile; impact is limited
+ * (activity data is public, existing bindings cannot be stolen, webhooks
+ * and sync never consult this table), but do not present a binding as
+ * proof of GitHub account ownership.
  *
  * Private keys must live in environment variables / the Render dashboard,
  * never in source, snapshots, or logs.
@@ -58,10 +81,63 @@ export type VerificationOutcome =
   | { status: "transient" }
   | { status: "unavailable" };
 
+/**
+ * Verify an installation belongs to OUR GitHub App.
+ *
+ * Implemented: App-membership check (step 1 of the enablement spec).
+ * Still deferred: verified GitHub-identity binding (steps 2-3, needs a
+ * GitHub OAuth login flow). Until that lands, a binding proves the
+ * installation is genuinely ours — never that the Strata user owns the
+ * GitHub account — and existing bindings still cannot be stolen
+ * (first-writer-wins). See the residual risk note in the module docs.
+ */
 export async function verifyInstallationWithGitHub(
-  _installationId: number
+  installationId: number
 ): Promise<VerificationOutcome> {
-  return { status: "unavailable" };
+  const appId = process.env.GITHUB_APP_ID ?? "";
+  if (!appId || !process.env.GITHUB_APP_PRIVATE_KEY) return { status: "unavailable" };
+  let jwt: string;
+  try {
+    jwt = mintAppJwt();
+  } catch {
+    // Local credential problem (e.g. malformed key): retrying cannot help
+    // until it is fixed, but burning the user's token for our config error
+    // would be wrong, so report transient and let the caller release it.
+    return { status: "transient" };
+  }
+  let res: Response;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 10000);
+    try {
+      res = await fetch(`https://api.github.com/app/installations/${installationId}`, {
+        headers: {
+          Authorization: `Bearer ${jwt}`,
+          Accept: "application/vnd.github+json",
+          "User-Agent": "strata-app"
+        },
+        signal: ctrl.signal
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch {
+    return { status: "transient" };
+  }
+  if (res.status === 404) return { status: "rejected" };
+  if (res.status === 401 || res.status === 403 || res.status >= 500) return { status: "transient" };
+  if (!res.ok) return { status: "rejected" };
+  let body: unknown;
+  try {
+    body = (await res.json()) as unknown;
+  } catch {
+    return { status: "transient" };
+  }
+  const record = body as { app_id?: unknown; account?: { login?: unknown } };
+  if (Number(record?.app_id) !== Number(appId)) return { status: "rejected" };
+  const login = record?.account?.login;
+  if (typeof login !== "string" || !login) return { status: "rejected" };
+  return { status: "verified", accountLogin: login };
 }
 
 /**

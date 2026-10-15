@@ -5,6 +5,7 @@ import { createClient } from "../lib/supabase-client";
 import type { Project, ProjectStatus } from "../lib/types";
 import { ProjectCard } from "./ProjectCard";
 import { SyncButton } from "./SyncButton";
+import { InstallAppButton } from "./InstallAppButton";
 import { SortDropdown } from "./SortDropdown";
 import { CountUp } from "./CountUp";
 import { importProfileRepos, type SyncRepo } from "../lib/github-sync";
@@ -191,6 +192,7 @@ export function DashboardClient({
           <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
             <button className="btn btn-secondary" onClick={onAddRepos} disabled={adding}>{adding ? "Adding" : "Add repos"}</button>
             <SyncButton repos={myRepos} />
+            <InstallAppButton />
           </span>
         ) : null}
       </div>
