@@ -106,7 +106,7 @@ create policy "profiles_owner_write" on profiles
   for all using (auth.uid() = id) with check (auth.uid() = id);
 drop policy if exists "profiles_public_read" on profiles;
 create policy "profiles_public_read" on profiles
-  for select using (true);
+  for select using (auth.uid() is not null);
 
 -- projects: owner write, public read
 drop policy if exists "projects_owner_write" on projects;
@@ -114,7 +114,7 @@ create policy "projects_owner_write" on projects
   for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
 drop policy if exists "projects_public_read" on projects;
 create policy "projects_public_read" on projects
-  for select using (true);
+  for select using (auth.uid() is not null);
 
 -- labels: write via parent ownership, public read
 drop policy if exists "labels_owner_write" on labels;
@@ -126,7 +126,7 @@ create policy "labels_owner_write" on labels
   );
 drop policy if exists "labels_public_read" on labels;
 create policy "labels_public_read" on labels
-  for select using (true);
+  for select using (auth.uid() is not null);
 
 -- project_repos: write via parent ownership, public read
 drop policy if exists "project_repos_owner_write" on project_repos;
@@ -138,15 +138,15 @@ create policy "project_repos_owner_write" on project_repos
   );
 drop policy if exists "project_repos_public_read" on project_repos;
 create policy "project_repos_public_read" on project_repos
-  for select using (true);
+  for select using (auth.uid() is not null);
 
 -- activity tables: public read only; owner writes go through the *_owner_write policies below (used by the dashboard Sync button)
 drop policy if exists "commits_public_read" on commits;
-create policy "commits_public_read" on commits for select using (true);
+create policy "commits_public_read" on commits for select using (auth.uid() is not null);
 drop policy if exists "pull_requests_public_read" on pull_requests;
-create policy "pull_requests_public_read" on pull_requests for select using (true);
+create policy "pull_requests_public_read" on pull_requests for select using (auth.uid() is not null);
 drop policy if exists "issues_public_read" on issues;
-create policy "issues_public_read" on issues for select using (true);
+create policy "issues_public_read" on issues for select using (auth.uid() is not null);
 
 -- activity tables: owners may insert/update rows for their own repos.
 -- Restricted to source = 'manual': verified rows ('webhook'/'api') can only

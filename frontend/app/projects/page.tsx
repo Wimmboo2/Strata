@@ -7,6 +7,19 @@ export default async function ProjectsPage() {
   const { data: userData } = await supabase.auth.getUser();
   const userId = userData.user?.id ?? null;
 
+  if (!userId) {
+    return (
+      <DashboardClient
+        initialProjects={[]}
+        initialLabelsByProject={{}}
+        initialMyRepos={[]}
+        initialRepoActivity={{}}
+        initialAuthed={false}
+        initialUserId={null}
+      />
+    );
+  }
+
   const [projectsRes, labelsRes, reposRes] = await Promise.all([
     supabase.from("projects").select("*").order("updated_at", { ascending: false }),
     supabase.from("labels").select("*"),

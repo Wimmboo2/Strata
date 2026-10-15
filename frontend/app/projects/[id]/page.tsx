@@ -24,9 +24,27 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   ]);
 
   const project = projectRes.data;
+  const sessionUser = userRes.data.user ?? null;
+
+  if (!sessionUser) {
+    return (
+      <div>
+        <p className="kicker">Library</p>
+        <h1>Projects</h1>
+        <div className="card">
+          <div className="card-title">Register or log in to start tracking</div>
+          <p className="card-body">Create an account or sign in to see projects and track your own repositories.</p>
+          <p style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <a className="btn btn-primary" href="/register">Register</a>
+            <a className="btn btn-secondary" href="/login">Login</a>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (!project) return <p>Project not found.</p>;
 
-  const sessionUser = userRes.data.user ?? null;
   const isOwner = sessionUser?.id === project.owner_id;
   const labels = (labelsRes.data ?? []) as { id: string; name: string }[];
   const repos = (reposRes.data ?? []) as { id: string; repo_full_name: string }[];

@@ -146,6 +146,23 @@ export function DashboardClient({
 
   const authed = initialAuthed;
 
+  if (!authed) {
+    return (
+      <div>
+        <p className="kicker">Library</p>
+        <h1>Projects</h1>
+        <div className="card">
+          <div className="card-title">Register or log in to start tracking</div>
+          <p className="card-body">Create an account or sign in to see projects and track your own repositories.</p>
+          <p style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <a className="btn btn-primary" href="/register">Register</a>
+            <a className="btn btn-secondary" href="/login">Login</a>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <p className="kicker">{authed ? "Dashboard" : "Library"}</p>
@@ -196,9 +213,6 @@ export function DashboardClient({
           </span>
         ) : null}
       </div>
-      {visible.length === 0 && !authed ? (
-        <div className="card"><div className="card-title">No projects yet</div><p className="card-body">Register to start tracking your own projects.</p><p><a className="btn btn-primary" href="/register">Register to start tracking</a></p></div>
-      ) : null}
       {visible.length === 0 && authed ? (
         <div className="card">
           <div className="card-title">No projects yet</div>
