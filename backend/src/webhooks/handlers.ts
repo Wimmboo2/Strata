@@ -1,4 +1,5 @@
 import { getAdminClient } from "../lib/supabase-admin";
+import { isValidGithubSha, isValidRepoFullName, normalizeRepoFullName, safeGithubUrl } from "../lib/urls";
 
 interface RepoRef {
   id: string;
@@ -25,20 +26,24 @@ async function touchSync(repoId: string) {
 }
 
 export async function handlePush(payload: { repository?: { full_name?: string }; commits?: { id: string; message: string; author?: { username?: string }; url?: string; timestamp?: string }[] }) {
-  const fullName = payload.repository?.full_name?.toLowerCase();
-  if (!fullName) return;
+  const rawName = payload.repository?.full_name;
+  if (!isValidRepoFullName(rawName)) return;
+  const fullName = normalizeRepoFullName(rawName);
   const repos = await findReposByFullName(fullName);
   const supabase = getAdminClient();
   for (const repo of repos) {
     for (const c of payload.commits ?? []) {
+      if (!isValidGithubSha(c.id)) continue;
+      const url = safeGithubUrl(c.url) ?? `https://github.com/${fullName}/commit/${c.id}`;
       await supabase.from("commits").upsert(
         {
           project_repo_id: repo.id,
           github_sha: c.id,
-          message: c.message ?? "",
+          message: typeof c.message === "string" ? c.message : "",
           author_login: c.author?.username ?? null,
-          url: c.url ?? `https://github.com/${fullName}/commit/${c.id}`,
-          committed_at: c.timestamp ?? new Date().toISOString()
+          url,
+          committed_at: c.timestamp ?? new Date().toISOString(),
+          source: "webhook"
         },
         { onConflict: "project_repo_id,github_sha" }
       );
@@ -52,22 +57,26 @@ export async function handlePullRequest(payload: {
   repository?: { full_name?: string };
   pull_request?: { number: number; title: string; state: string; merged?: boolean; user?: { login?: string }; html_url: string; updated_at: string };
 }) {
-  const fullName = payload.repository?.full_name?.toLowerCase();
+  const rawName = payload.repository?.full_name;
   const pr = payload.pull_request;
-  if (!fullName || !pr) return;
+  if (!isValidRepoFullName(rawName) || !pr) return;
+  const fullName = normalizeRepoFullName(rawName);
   const repos = await findReposByFullName(fullName);
   const supabase = getAdminClient();
   const state = pr.merged ? "merged" : pr.state;
+  const url = safeGithubUrl(pr.html_url);
+  if (url === null || !Number.isInteger(pr.number)) return;
   for (const repo of repos) {
     await supabase.from("pull_requests").upsert(
       {
         project_repo_id: repo.id,
         github_number: pr.number,
-        title: pr.title,
+        title: typeof pr.title === "string" ? pr.title : "",
         state,
         author_login: pr.user?.login ?? null,
-        url: pr.html_url,
-        updated_at_github: pr.updated_at
+        url,
+        updated_at_github: pr.updated_at,
+        source: "webhook"
       },
       { onConflict: "project_repo_id,github_number" }
     );
@@ -79,36 +88,30 @@ export async function handleIssues(payload: {
   repository?: { full_name?: string };
   issue?: { number: number; title: string; state: string; user?: { login?: string }; html_url: string; updated_at: string; pull_request?: unknown };
 }) {
-  const fullName = payload.repository?.full_name?.toLowerCase();
+  const rawName = payload.repository?.full_name;
   const issue = payload.issue;
-  if (!fullName || !issue) return;
+  if (!isValidRepoFullName(rawName) || !issue) return;
   if (issue.pull_request) return;
-  const repos = await findReposByFullName(fullName);
+  const repos = await findReposByFullName(normalizeRepoFullName(rawName));
   const supabase = getAdminClient();
+  const url = safeGithubUrl(issue.html_url);
+  if (url === null || !Number.isInteger(issue.number)) return;
   for (const repo of repos) {
     await supabase.from("issues").upsert(
       {
         project_repo_id: repo.id,
         github_number: issue.number,
-        title: issue.title,
+        title: typeof issue.title === "string" ? issue.title : "",
         state: issue.state,
         author_login: issue.user?.login ?? null,
-        url: issue.html_url,
-        updated_at_github: issue.updated_at
+        url,
+        updated_at_github: issue.updated_at,
+        source: "webhook"
       },
       { onConflict: "project_repo_id,github_number" }
     );
     await touchSync(repo.id);
   }
-}
-
-export async function recordInstallation(installationId: number, accountLogin: string, ownerProfileId: string) {
-  const supabase = getAdminClient();
-  const { error } = await supabase.from("github_installations").upsert(
-    { installation_id: installationId, github_account_login: accountLogin, owner_profile_id: ownerProfileId },
-    { onConflict: "installation_id" }
-  );
-  if (error) throw error;
 }
 
 export async function handleInstallation(payload: { action?: string; installation?: { id: number; account?: { login?: string } } }) {
@@ -120,8 +123,9 @@ export async function handleInstallation(payload: { action?: string; installatio
     return;
   }
   if (payload.action !== "created" && payload.action !== "new_permissions_accepted") return;
-  // Owner linkage is completed via install callback with state=profile_id.
-  // Webhook alone cannot reliably map installation to a Strata user, so store only if already known.
+  // Owner linkage is completed via the install callback's single-use setup
+  // token (see webhooks/install.ts). A bare webhook cannot map an
+  // installation to a Strata user, so only refresh rows already linked.
   const supabase = getAdminClient();
   const { data: known } = await supabase.from("github_installations").select("*").eq("installation_id", installation.id).single();
   if (known) {

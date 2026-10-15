@@ -19,8 +19,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   let authed = false;
   try {
     const supabase = createServerSupabaseClient();
-    const { data } = await supabase.auth.getSession();
-    authed = !!data.session;
+    const { data } = await supabase.auth.getUser();
+    authed = !!data.user;
   } catch {
     authed = false;
   }

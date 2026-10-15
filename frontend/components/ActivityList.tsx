@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { relativeTime } from "../lib/format";
+import { SafeLink } from "./SafeLink";
 
 export interface CommitItem {
   github_sha: string;
@@ -8,6 +9,7 @@ export interface CommitItem {
   author_login: string | null;
   url: string;
   committed_at: string;
+  source: string;
 }
 
 export interface PullItem {
@@ -17,6 +19,7 @@ export interface PullItem {
   author_login: string | null;
   url: string;
   updated_at_github: string;
+  source: string;
 }
 
 export interface IssueItem {
@@ -26,6 +29,7 @@ export interface IssueItem {
   author_login: string | null;
   url: string;
   updated_at_github: string;
+  source: string;
 }
 
 const INITIAL = 5;
@@ -60,7 +64,8 @@ export function ActivityList(props: Props) {
             const c = row as CommitItem;
             return (
               <div key={c.github_sha} style={{ padding: "14px 22px", borderTop }}>
-                <a href={c.url}>{firstName(c.message)}</a>
+                <SafeLink href={c.url}>{firstName(c.message)}</SafeLink>{" "}
+                {c.source === "manual" ? <span className="tag tag-neutral">unverified</span> : null}
                 <div className="card-meta" style={{ marginTop: 2 }}>
                   {(c.author_login ?? "unknown author") + ", " + relativeTime(c.committed_at)}
                 </div>
@@ -70,8 +75,9 @@ export function ActivityList(props: Props) {
           const p = row as PullItem | IssueItem;
           return (
             <div key={p.github_number} style={{ padding: "14px 22px", borderTop }}>
-              <a href={p.url}>{"#" + p.github_number + " " + p.title}</a>{" "}
-              <span className={stateTagClass(p.state)}>{p.state}</span>
+              <SafeLink href={p.url}>{"#" + p.github_number + " " + p.title}</SafeLink>{" "}
+              <span className={stateTagClass(p.state)}>{p.state}</span>{" "}
+              {p.source === "manual" ? <span className="tag tag-neutral">unverified</span> : null}
               <div className="card-meta" style={{ marginTop: 2 }}>
                 {(p.author_login ?? "unknown author") + ", " + relativeTime(p.updated_at_github)}
               </div>

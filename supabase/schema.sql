@@ -44,6 +44,7 @@ create table if not exists commits (
   author_login text,
   url text not null,
   committed_at timestamptz not null,
+  source text not null default 'manual' check (source in ('webhook', 'api', 'manual')),
   unique (project_repo_id, github_sha)
 );
 
@@ -56,6 +57,7 @@ create table if not exists pull_requests (
   author_login text,
   url text not null,
   updated_at_github timestamptz not null,
+  source text not null default 'manual' check (source in ('webhook', 'api', 'manual')),
   unique (project_repo_id, github_number)
 );
 
@@ -68,6 +70,7 @@ create table if not exists issues (
   author_login text,
   url text not null,
   updated_at_github timestamptz not null,
+  source text not null default 'manual' check (source in ('webhook', 'api', 'manual')),
   unique (project_repo_id, github_number)
 );
 
@@ -145,32 +148,53 @@ create policy "pull_requests_public_read" on pull_requests for select using (tru
 drop policy if exists "issues_public_read" on issues;
 create policy "issues_public_read" on issues for select using (true);
 
--- activity tables: owners may insert/update rows for their own repos
+-- activity tables: owners may insert/update rows for their own repos.
+-- Restricted to source = 'manual': verified rows ('webhook'/'api') can only
+-- ever be written by the service role, and no browser write can change a
+-- row's provenance in either direction.
 drop policy if exists "commits_owner_write" on commits;
 create policy "commits_owner_write" on commits
   for all using (
-    exists (select 1 from project_repos join projects on projects.id = project_repos.project_id where project_repos.id = commits.project_repo_id and projects.owner_id = auth.uid())
+    source = 'manual' and exists (select 1 from project_repos join projects on projects.id = project_repos.project_id where project_repos.id = commits.project_repo_id and projects.owner_id = auth.uid())
   ) with check (
-    exists (select 1 from project_repos join projects on projects.id = project_repos.project_id where project_repos.id = commits.project_repo_id and projects.owner_id = auth.uid())
+    source = 'manual' and exists (select 1 from project_repos join projects on projects.id = project_repos.project_id where project_repos.id = commits.project_repo_id and projects.owner_id = auth.uid())
   );
 drop policy if exists "pull_requests_owner_write" on pull_requests;
 create policy "pull_requests_owner_write" on pull_requests
   for all using (
-    exists (select 1 from project_repos join projects on projects.id = project_repos.project_id where project_repos.id = pull_requests.project_repo_id and projects.owner_id = auth.uid())
+    source = 'manual' and exists (select 1 from project_repos join projects on projects.id = project_repos.project_id where project_repos.id = pull_requests.project_repo_id and projects.owner_id = auth.uid())
   ) with check (
-    exists (select 1 from project_repos join projects on projects.id = project_repos.project_id where project_repos.id = pull_requests.project_repo_id and projects.owner_id = auth.uid())
+    source = 'manual' and exists (select 1 from project_repos join projects on projects.id = project_repos.project_id where project_repos.id = pull_requests.project_repo_id and projects.owner_id = auth.uid())
   );
 drop policy if exists "issues_owner_write" on issues;
 create policy "issues_owner_write" on issues
   for all using (
-    exists (select 1 from project_repos join projects on projects.id = project_repos.project_id where project_repos.id = issues.project_repo_id and projects.owner_id = auth.uid())
+    source = 'manual' and exists (select 1 from project_repos join projects on projects.id = project_repos.project_id where project_repos.id = issues.project_repo_id and projects.owner_id = auth.uid())
   ) with check (
-    exists (select 1 from project_repos join projects on projects.id = project_repos.project_id where project_repos.id = issues.project_repo_id and projects.owner_id = auth.uid())
+    source = 'manual' and exists (select 1 from project_repos join projects on projects.id = project_repos.project_id where project_repos.id = issues.project_repo_id and projects.owner_id = auth.uid())
   );
 
 -- github_installations: owner only, no public read
 drop policy if exists "installations_owner_all" on github_installations;
 create policy "installations_owner_all" on github_installations
   for all using (auth.uid() = owner_profile_id) with check (auth.uid() = owner_profile_id);
+
+-- install_states: single-use setup tokens, service role only (no policies)
+create table if not exists install_states (
+  token text primary key,
+  profile_id uuid not null references profiles(id) on delete cascade,
+  expires_at timestamptz not null,
+  used_at timestamptz,
+  created_at timestamptz default now()
+);
+alter table install_states enable row level security;
+
+-- webhook_deliveries: delivery idempotency log, service role only (no policies)
+create table if not exists webhook_deliveries (
+  delivery_id text primary key,
+  status text not null check (status in ('processing', 'ok', 'failed')),
+  received_at timestamptz not null default now()
+);
+alter table webhook_deliveries enable row level security;
 
 -- sync_state: no user access, service role only (no policies for anon/authenticated)

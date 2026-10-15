@@ -4,8 +4,8 @@ import type { Project } from "../../lib/types";
 
 export default async function ProjectsPage() {
   const supabase = createServerSupabaseClient();
-  const { data: sessionData } = await supabase.auth.getSession();
-  const userId = sessionData.session?.user.id ?? null;
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id ?? null;
 
   const [projectsRes, labelsRes, reposRes] = await Promise.all([
     supabase.from("projects").select("*").order("updated_at", { ascending: false }),

@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { getAdminClient } from "../lib/supabase-admin";
+import { isValidRepoFullName, normalizeRepoFullName, safeGithubUrl } from "../lib/urls";
 import { conditionalRequest } from "./github-client";
 
 interface ProjectRepoRow {
@@ -50,8 +51,8 @@ async function setEtag(repoId: string, resource: string, etag: string | null) {
 
 async function syncRepo(repo: ProjectRepoRow) {
   const supabase = getAdminClient();
-  const [owner, name] = repo.repo_full_name.split("/");
-  if (!owner || !name) return;
+  if (!isValidRepoFullName(repo.repo_full_name)) return;
+  const [owner, name] = normalizeRepoFullName(repo.repo_full_name).split("/");
 
   const commitsRes = await conditionalRequest<GithubCommit[]>(
     `/repos/${owner}/${name}/commits`,
@@ -59,14 +60,17 @@ async function syncRepo(repo: ProjectRepoRow) {
   );
   if (commitsRes.status === 200 && commitsRes.data) {
     for (const c of commitsRes.data.slice(0, 100)) {
+      const url = safeGithubUrl(c.html_url);
+      if (!url) continue;
       await supabase.from("commits").upsert(
         {
           project_repo_id: repo.id,
           github_sha: c.sha,
           message: c.commit.message,
           author_login: c.author?.login ?? null,
-          url: c.html_url,
-          committed_at: c.commit.author?.date ?? new Date().toISOString()
+          url,
+          committed_at: c.commit.author?.date ?? new Date().toISOString(),
+          source: "api"
         },
         { onConflict: "project_repo_id,github_sha" }
       );
@@ -82,6 +86,8 @@ async function syncRepo(repo: ProjectRepoRow) {
   );
   if (pullsRes.status === 200 && pullsRes.data) {
     for (const p of pullsRes.data.slice(0, 100)) {
+      const url = safeGithubUrl(p.html_url);
+      if (!url) continue;
       await supabase.from("pull_requests").upsert(
         {
           project_repo_id: repo.id,
@@ -89,8 +95,9 @@ async function syncRepo(repo: ProjectRepoRow) {
           title: p.title,
           state: p.merged_at ? "merged" : p.state,
           author_login: p.user?.login ?? null,
-          url: p.html_url,
-          updated_at_github: p.updated_at
+          url,
+          updated_at_github: p.updated_at,
+          source: "api"
         },
         { onConflict: "project_repo_id,github_number" }
       );
@@ -107,6 +114,8 @@ async function syncRepo(repo: ProjectRepoRow) {
   if (issuesRes.status === 200 && issuesRes.data) {
     for (const i of issuesRes.data.slice(0, 100)) {
       if (i.pull_request) continue;
+      const url = safeGithubUrl(i.html_url);
+      if (!url) continue;
       await supabase.from("issues").upsert(
         {
           project_repo_id: repo.id,
@@ -114,8 +123,9 @@ async function syncRepo(repo: ProjectRepoRow) {
           title: i.title,
           state: i.state,
           author_login: i.user?.login ?? null,
-          url: i.html_url,
-          updated_at_github: i.updated_at
+          url,
+          updated_at_github: i.updated_at,
+          source: "api"
         },
         { onConflict: "project_repo_id,github_number" }
       );

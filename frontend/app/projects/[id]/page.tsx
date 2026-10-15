@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from "../../../lib/supabase-server";
 import { StatusPicker } from "../../../components/StatusPicker";
 import { LabelChips } from "../../../components/LabelChips";
 import { SyncButton } from "../../../components/SyncButton";
+import { repoPageUrl } from "../../../lib/urls";
 import { ActivityList, type CommitItem, type PullItem, type IssueItem } from "../../../components/ActivityList";
 import { CountUp } from "../../../components/CountUp";
 import { relativeTime } from "../../../lib/format";
@@ -15,9 +16,9 @@ function firstName(message: string) {
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
   const supabase = createServerSupabaseClient();
 
-  const [projectRes, sessionRes, labelsRes, reposRes] = await Promise.all([
+  const [projectRes, userRes, labelsRes, reposRes] = await Promise.all([
     supabase.from("projects").select("*").eq("id", params.id).single(),
-    supabase.auth.getSession(),
+    supabase.auth.getUser(),
     supabase.from("labels").select("*").eq("project_id", params.id),
     supabase.from("project_repos").select("*").eq("project_id", params.id)
   ]);
@@ -25,11 +26,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const project = projectRes.data;
   if (!project) return <p>Project not found.</p>;
 
-  const sessionUser = sessionRes.data.session?.user ?? null;
+  const sessionUser = userRes.data.user ?? null;
   const isOwner = sessionUser?.id === project.owner_id;
   const labels = (labelsRes.data ?? []) as { id: string; name: string }[];
   const repos = (reposRes.data ?? []) as { id: string; repo_full_name: string }[];
   const primary = repos[0] ?? null;
+  const primaryHref = primary ? repoPageUrl(primary.repo_full_name) : null;
   const repoIds = repos.map((r) => r.id);
 
   let commits: CommitItem[] = [];
@@ -69,9 +71,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     <div style={{ display: "grid", gap: 18 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <h1 style={{ margin: 0 }}>
-          {primary ? (
-            <a href={"https://github.com/" + primary.repo_full_name} style={{ textDecoration: "none" }}>{primary.repo_full_name}</a>
-          ) : project.name}
+          {primary && primaryHref ? (
+            <a href={primaryHref} style={{ textDecoration: "none" }}>{primary.repo_full_name}</a>
+          ) : primary ? (
+            <span>{primary.repo_full_name}</span>
+          ) : (
+            project.name
+          )}
         </h1>
         <StatusPicker projectId={project.id} status={project.status as ProjectStatus} editable={isOwner} />
       </div>

@@ -3,7 +3,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../../lib/supabase-client";
 
-function githubUsernameFromUrl(input: string): string | null {
+export const PENDING_PROFILE_KEY = "strata-pending-profile";
+
+export function githubUsernameFromUrl(input: string): string | null {
   try {
     const u = new URL(input.trim());
     if (u.hostname !== "github.com") return null;
@@ -14,6 +16,29 @@ function githubUsernameFromUrl(input: string): string | null {
   }
 }
 
+export function readPendingProfile(): { githubUrl: string; displayName: string | null } | null {
+  try {
+    const raw = localStorage.getItem(PENDING_PROFILE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { githubUrl?: unknown; displayName?: unknown };
+    if (typeof parsed.githubUrl !== "string" || !parsed.githubUrl) return null;
+    return {
+      githubUrl: parsed.githubUrl,
+      displayName: typeof parsed.displayName === "string" ? parsed.displayName : null
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function clearPendingProfile(): void {
+  try {
+    localStorage.removeItem(PENDING_PROFILE_KEY);
+  } catch {
+    // Storage unavailable; the pending entry simply stays unread.
+  }
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -21,11 +46,13 @@ export default function RegisterPage() {
   const [githubUrl, setGithubUrl] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setNotice(null);
     const username = githubUsernameFromUrl(githubUrl);
     if (!username) {
       setError("GitHub profile link must look like https://github.com/username");
@@ -38,8 +65,27 @@ export default function RegisterPage() {
       if (signUpError) throw signUpError;
       const userId = data.user?.id;
       if (!userId) throw new Error("Registration succeeded but no user id returned");
+      if (!data.session) {
+        // Email confirmation is on: there is no session yet, so RLS forbids
+        // the profile insert. Stash the profile fields and finish setup
+        // after the user confirms and signs in.
+        try {
+          localStorage.setItem(
+            PENDING_PROFILE_KEY,
+            JSON.stringify({ githubUrl: githubUrl.trim(), displayName: displayName || null })
+          );
+        } catch {
+          // Storage unavailable; the sign-in page offers manual setup instead.
+        }
+        setNotice("Account created. Confirm your email, then sign in — your profile will be finished automatically.");
+        setLoading(false);
+        return;
+      }
       const { error: profileError } = await supabase.from("profiles").insert({ id: userId, display_name: displayName || null, github_profile_url: githubUrl.trim(), github_username: username });
-      if (profileError) throw profileError;
+      // 23505 = profile already exists (e.g. retried signup): safe to proceed,
+      // the insert never overwrites another user's row (RLS check id = self).
+      if (profileError && profileError.code !== "23505") throw profileError;
+      clearPendingProfile();
       router.push("/projects");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
@@ -59,6 +105,7 @@ export default function RegisterPage() {
           <div className="field"><label htmlFor="rname">Display name</label><input id="rname" className="input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></div>
           <div className="field"><label htmlFor="rgh">GitHub profile link</label><input id="rgh" className="input" placeholder="https://github.com/username" value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} required /></div>
           {error ? <p className="form-error">{error}</p> : null}
+          {notice ? <p className="card-meta">{notice}</p> : null}
           <button className="btn btn-primary btn-block btn" type="submit" disabled={loading}>{loading ? "Registering" : "Register"}</button>
         </form>
       </div>
