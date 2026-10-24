@@ -10,6 +10,8 @@ import { handleInstallation, handleIssues, handlePullRequest, handlePush } from 
 import { confirmInstallationLink, isGithubInstallEnabled, isValidSetupState, mintSetupState } from "./webhooks/install";
 import { getAdminClient } from "./lib/supabase-admin";
 import { runPoll } from "./sync/poll";
+import { getJob, startUserSync } from "./sync/user-sync";
+import { resolveUserId } from "./lib/auth";
 
 const config = loadConfig();
 // Fail closed: without a real webhook secret the server would accept forged
@@ -52,6 +54,19 @@ const setupLimiter = rateLimit({
   windowMs: 60_000,
   max: 10,
   key: (req) => "setup:" + crypto.createHash("sha256").update(req.header("authorization") ?? "none").digest("hex")
+});
+// User-triggered sync: budget per caller token (not IP), so one noisy
+// client cannot spend everyone's allowance.
+const syncRunLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 6,
+  key: (req) => "syncrun:" + crypto.createHash("sha256").update(req.header("authorization") ?? "none").digest("hex")
+});
+// Status polling is frequent but cheap; allow a generous per-token budget.
+const syncStatusLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 120,
+  key: (req) => "syncstatus:" + crypto.createHash("sha256").update(req.header("authorization") ?? "none").digest("hex")
 });
 
 app.get("/health", (_req, res) => {
@@ -193,10 +208,80 @@ app.post(
   })
 );
 
+// Start a sync for the caller's own repos.
+//
+// The browser used to do this itself, which meant every sync spent the
+// 60 requests/hour anonymous GitHub budget of the user's IP. Running it here
+// lets the backend authenticate as a GitHub App installation instead.
+//
+// The work happens in the background and the client polls /sync/status:
+// a cold Render instance needs ~1 minute to wake, and a proxy will not
+// hold a request open that long.
+app.post(
+  "/sync/run",
+  syncRunLimiter,
+  express.json({ limit: "16kb" }),
+  asyncHandler(async (req, res) => {
+    const userId = await resolveUserId(req);
+    if (!userId) {
+      res.status(401).json({ error: "unauthorized" });
+      return;
+    }
+    const body = (req.body ?? {}) as { repo_ids?: unknown };
+    let repoIds: string[] | null = null;
+    if (Array.isArray(body.repo_ids)) {
+      // Only well-formed ids are accepted; the backend still intersects them
+      // with the repos the caller actually owns.
+      repoIds = body.repo_ids.filter((v): v is string => typeof v === "string" && v.length <= 64).slice(0, 50);
+    }
+    const job = startUserSync(userId, repoIds);
+    // Per-user state: never let a cache hold on to it.
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.status(202).json({ ok: true, job_id: job.id, state: job.state });
+  })
+);
+
+// Poll the state of a sync job started by /sync/run.
+app.get(
+  "/sync/status",
+  syncStatusLimiter,
+  asyncHandler(async (req, res) => {
+    const userId = await resolveUserId(req);
+    if (!userId) {
+      res.status(401).json({ error: "unauthorized" });
+      return;
+    }
+    const jobId = String(req.query.job_id ?? "");
+    const job = getJob(jobId);
+    // A job belonging to somebody else is reported as unknown, never leaked.
+    if (!job || job.userId !== userId) {
+      res.status(404).json({ error: "unknown job" });
+      return;
+    }
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.json({
+      ok: true,
+      job_id: job.id,
+      state: job.state,
+      repos: job.repos,
+      synced: job.synced,
+      skipped: job.skipped,
+      error: job.error
+    });
+  })
+);
+
 // Last stop for anything asyncHandler catches. Never leaks internals.
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction): void => {
   console.error("unhandled backend error", err);
   if (res.headersSent) return;
+  // A malformed JSON body is the client's mistake, not ours: answer 400
+  // instead of a blanket 500 so the caller can tell the two apart.
+  const status = (err as { status?: number; statusCode?: number })?.status ?? (err as { statusCode?: number })?.statusCode;
+  if (status === 400) {
+    res.status(400).json({ error: "invalid request" });
+    return;
+  }
   res.status(500).json({ error: "internal error" });
 });
 

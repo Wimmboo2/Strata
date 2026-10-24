@@ -2,6 +2,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../../../lib/supabase-client";
+import { Select } from "../../../../components/Select";
+import { BackLink } from "../../../../components/BackLink";
+
+const STATUS_OPTIONS = [
+  { value: "building", label: "building" },
+  { value: "finished", label: "finished" },
+  { value: "paused", label: "paused" }
+];
 
 export default function EditProjectPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -88,18 +96,22 @@ export default function EditProjectPage({ params }: { params: { id: string } }) 
 
   return (
     <div>
+      <BackLink />
       <p className="kicker">Edit entry</p>
       <h1>Edit project</h1>
       <div className="card">
         <form onSubmit={onSave}>
           <div className="field"><label htmlFor="ename">Project name</label><input id="ename" className="input" value={name} onChange={(e) => setName(e.target.value)} required /></div>
           <div className="field"><label htmlFor="edesc">Description</label><textarea id="edesc" className="input" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-          <div className="field"><label htmlFor="estatus">Status</label>
-            <select id="estatus" className="input" value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
-              <option value="building">building</option>
-              <option value="finished">finished</option>
-              <option value="paused">paused</option>
-            </select>
+          <div className="field">
+            <label id="estatus-label" htmlFor="estatus">Status</label>
+            <Select
+              id="estatus"
+              labelId="estatus-label"
+              value={status}
+              options={STATUS_OPTIONS}
+              onChange={(next) => setStatus(next as typeof status)}
+            />
           </div>
           <div className="field"><label htmlFor="elabels">Labels</label><input id="elabels" className="input" value={labels} onChange={(e) => setLabels(e.target.value)} placeholder="frontend, side-project" /></div>
           {error ? <p className="form-error">{error}</p> : null}

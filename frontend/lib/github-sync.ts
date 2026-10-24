@@ -1,14 +1,9 @@
 "use client";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isValidRepoFullName, safeGithubUrl } from "./urls";
 
 export interface SyncRepo {
   id: string;
   repo_full_name: string;
-}
-
-function etagKey(repoId: string, resource: string) {
-  return "strata-etag:" + repoId + ":" + resource;
 }
 
 export async function conditionalGet(url: string, key: string): Promise<{ fresh: false } | { fresh: true; data: unknown[] }> {
@@ -20,80 +15,6 @@ export async function conditionalGet(url: string, key: string): Promise<{ fresh:
   if (next) localStorage.setItem(key, next);
   else localStorage.removeItem(key);
   return { fresh: true, data: (await res.json()) as unknown[] };
-}
-
-export async function syncRepoActivity(supabase: SupabaseClient, repo: SyncRepo): Promise<void> {
-  if (!isValidRepoFullName(repo.repo_full_name)) {
-    throw new Error("Invalid repo name: " + repo.repo_full_name);
-  }
-  const [owner, name] = repo.repo_full_name.trim().toLowerCase().split("/");
-  const base = "https://api.github.com/repos/" + owner + "/" + name;
-
-  const commits = await conditionalGet(base + "/commits?per_page=100", etagKey(repo.id, "commits"));
-  if (commits.fresh) {
-    for (const c of commits.data.slice(0, 100) as Record<string, any>[]) {
-      const url = safeGithubUrl(c.html_url);
-      if (typeof c.sha !== "string" || url === null) continue;
-      const { error } = await supabase.from("commits").upsert(
-        {
-          project_repo_id: repo.id,
-          github_sha: c.sha,
-          message: c.commit?.message ?? "",
-          author_login: c.author?.login ?? null,
-          url,
-          committed_at: c.commit?.author?.date ?? new Date().toISOString(),
-          source: "manual"
-        },
-        { onConflict: "project_repo_id,github_sha" }
-      );
-      if (error) throw error;
-    }
-  }
-
-  const pulls = await conditionalGet(base + "/pulls?state=all&per_page=100", etagKey(repo.id, "pulls"));
-  if (pulls.fresh) {
-    for (const p of pulls.data.slice(0, 100) as Record<string, any>[]) {
-      const url = safeGithubUrl(p.html_url);
-      if (!Number.isInteger(p.number) || url === null) continue;
-      const { error } = await supabase.from("pull_requests").upsert(
-        {
-          project_repo_id: repo.id,
-          github_number: p.number,
-          title: p.title,
-          state: p.merged_at ? "merged" : p.state,
-          author_login: p.user?.login ?? null,
-          url,
-          updated_at_github: p.updated_at,
-          source: "manual"
-        },
-        { onConflict: "project_repo_id,github_number" }
-      );
-      if (error) throw error;
-    }
-  }
-
-  const issues = await conditionalGet(base + "/issues?state=all&per_page=100", etagKey(repo.id, "issues"));
-  if (issues.fresh) {
-    const onlyIssues = (issues.data as Record<string, any>[]).filter((i) => !i.pull_request).slice(0, 100);
-    for (const i of onlyIssues) {
-      const url = safeGithubUrl(i.html_url);
-      if (!Number.isInteger(i.number) || url === null) continue;
-      const { error } = await supabase.from("issues").upsert(
-        {
-          project_repo_id: repo.id,
-          github_number: i.number,
-          title: i.title,
-          state: i.state,
-          author_login: i.user?.login ?? null,
-          url,
-          updated_at_github: i.updated_at,
-          source: "manual"
-        },
-        { onConflict: "project_repo_id,github_number" }
-      );
-      if (error) throw error;
-    }
-  }
 }
 
 export async function importProfileRepos(supabase: SupabaseClient, userId: string, opts?: { force?: boolean }): Promise<number> {

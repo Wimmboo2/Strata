@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { getAdminClient } from "../lib/supabase-admin";
+import { mintAppJwt } from "../lib/github-app";
 
 const STATE_TTL_MS = 10 * 60 * 1000;
 const STATE_RE = /^[0-9a-f]{64}$/i;
@@ -18,32 +19,6 @@ export function isValidSetupState(value: unknown): value is string {
  */
 export function isGithubInstallEnabled(): boolean {
   return Boolean(process.env.GITHUB_APP_ID) && Boolean(process.env.GITHUB_APP_PRIVATE_KEY);
-}
-
-function base64url(input: Buffer | string): string {
-  return Buffer.from(input)
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-}
-
-/** Short-lived App JWT for GitHub API authentication (node:crypto only). */
-function mintAppJwt(): string {
-  const appId = process.env.GITHUB_APP_ID ?? "";
-  // Tolerate escaped newlines in case the key was pasted with \n literals;
-  // a real PEM body is base64, which never contains a backslash, so this
-  // replacement cannot corrupt a valid key.
-  const privateKey = (process.env.GITHUB_APP_PRIVATE_KEY ?? "").replace(/\\n/g, "\n");
-  if (!appId || !privateKey) throw new Error("github app credentials missing");
-  const now = Math.floor(Date.now() / 1000);
-  const data =
-    base64url(JSON.stringify({ alg: "RS256", typ: "JWT" })) +
-    "." +
-    base64url(JSON.stringify({ iat: now - 60, exp: now + 600, iss: appId }));
-  const signer = crypto.createSign("RSA-SHA256");
-  signer.update(data);
-  return data + "." + base64url(signer.sign(privateKey));
 }
 
 /**

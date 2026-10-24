@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from "../../../lib/supabase-server";
 import { StatusPicker } from "../../../components/StatusPicker";
 import { LabelChips } from "../../../components/LabelChips";
 import { SyncButton } from "../../../components/SyncButton";
+import { BackLink } from "../../../components/BackLink";
 import { repoPageUrl } from "../../../lib/urls";
 import { ActivityList, type CommitItem, type PullItem, type IssueItem } from "../../../components/ActivityList";
 import { CountUp } from "../../../components/CountUp";
@@ -87,6 +88,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
   return (
     <div style={{ display: "grid", gap: 18 }}>
+      <div>
+        <BackLink />
+      </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <h1 style={{ margin: 0 }}>
           {primary && primaryHref ? (

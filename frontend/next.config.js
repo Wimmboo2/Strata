@@ -9,6 +9,20 @@ const nextConfig = {
         destination: `${BACKEND_URL}/:path*`
       }
     ];
+  },
+  async headers() {
+    return [
+      {
+        // Sync responses are per-user and change constantly. Vercel caches
+        // external-rewrite responses by default, so opt this path out
+        // explicitly: a cached /sync/status would report a stale job state.
+        source: "/api/backend/:path*",
+        headers: [
+          { key: "x-vercel-enable-rewrite-caching", value: "0" },
+          { key: "Cache-Control", value: "no-store, no-cache, must-revalidate" }
+        ]
+      }
+    ];
   }
 };
 
