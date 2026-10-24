@@ -12,6 +12,7 @@ import { getAdminClient } from "./lib/supabase-admin";
 import { runPoll } from "./sync/poll";
 import { getJob, startUserSync } from "./sync/user-sync";
 import { resolveUserId } from "./lib/auth";
+import { clearInstallStatusCache, getInstallStatus } from "./lib/install-status";
 
 const config = loadConfig();
 // Fail closed: without a real webhook secret the server would accept forged
@@ -68,6 +69,12 @@ const syncStatusLimiter = rateLimit({
   max: 120,
   key: (req) => "syncstatus:" + crypto.createHash("sha256").update(req.header("authorization") ?? "none").digest("hex")
 });
+// Install status is read on every dashboard load; per token, not per IP.
+const installStatusLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 30,
+  key: (req) => "installstatus:" + crypto.createHash("sha256").update(req.header("authorization") ?? "none").digest("hex")
+});
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
@@ -121,6 +128,24 @@ app.post(
       if (deliveryId) await completeDelivery(deliveryId, false);
       res.status(500).json({ error: "handler failed" });
     }
+  })
+);
+
+// Report whether instant (webhook) updates are active for the caller's
+// repos. The dashboard uses this to swap the install button for an
+// "Instant updates enabled" badge.
+app.get(
+  "/github/install/status",
+  installStatusLimiter,
+  asyncHandler(async (req, res) => {
+    const userId = await resolveUserId(req);
+    if (!userId) {
+      res.status(401).json({ error: "unauthorized" });
+      return;
+    }
+    const status = await getInstallStatus(userId);
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.json({ ok: true, ...status });
   })
 );
 
@@ -186,6 +211,8 @@ app.get(
       res.status(status).json({ error: result.reason });
       return;
     }
+    // The installation just changed, so any cached status is now stale.
+    clearInstallStatusCache();
     res.json({ ok: true, installation_id: installationId, already: result.already });
   })
 );
