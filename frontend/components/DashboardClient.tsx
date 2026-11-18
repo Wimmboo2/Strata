@@ -27,14 +27,12 @@ const SORTS: { value: string; label: string }[] = [
 
 export function DashboardClient({
   initialProjects,
-  initialLabelsByProject,
   initialMyRepos,
   initialRepoActivity,
   initialAuthed,
   initialUserId
 }: {
   initialProjects: Project[];
-  initialLabelsByProject: Record<string, string[]>;
   initialMyRepos: SyncRepo[];
   initialRepoActivity: Record<string, string>;
   initialAuthed: boolean;
@@ -42,11 +40,10 @@ export function DashboardClient({
 }) {
   const router = useRouter();
   const [projects, setProjects] = useState(initialProjects);
-  const [labelsByProject, setLabelsByProject] = useState(initialLabelsByProject);
   const [myRepos, setMyRepos] = useState(initialMyRepos);
   const [repoActivity, setRepoActivity] = useState(initialRepoActivity);
   const [status, setStatus] = useState<ProjectStatus | "">("");
-  const [label, setLabel] = useState("");
+  const [query, setQuery] = useState("");
   const [sort, setSort] = useState("updated");
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -56,9 +53,6 @@ export function DashboardClient({
   useEffect(() => {
     setProjects(initialProjects);
   }, [initialProjects]);
-  useEffect(() => {
-    setLabelsByProject(initialLabelsByProject);
-  }, [initialLabelsByProject]);
   useEffect(() => {
     setMyRepos(initialMyRepos);
   }, [initialMyRepos]);
@@ -84,13 +78,10 @@ export function DashboardClient({
   }, [initialAuthed, initialUserId, router]);
 
   const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase();
     const filtered = projects
       .filter((p) => !status || p.status === status)
-      .filter((p) => {
-        if (!label.trim()) return true;
-        const names = labelsByProject[p.id] ?? [];
-        return names.some((n) => n.toLowerCase().includes(label.trim().toLowerCase()));
-      });
+      .filter((p) => !needle || p.name.toLowerCase().includes(needle));
     const sorted = [...filtered];
     const activity = (p: Project) => repoActivity[p.id] ?? p.updated_at;
     sorted.sort((a, b) => {
@@ -108,7 +99,7 @@ export function DashboardClient({
       }
     });
     return sorted;
-  }, [projects, labelsByProject, status, label, sort, repoActivity]);
+  }, [projects, status, query, sort, repoActivity]);
 
   const counts = useMemo(
     () => ({
@@ -198,7 +189,7 @@ export function DashboardClient({
             </button>
           ))}
         </div>
-        <input className="input" style={{ maxWidth: 200 }} placeholder="Filter by label" value={label} onChange={(e) => setLabel(e.target.value)} aria-label="Filter by label" />
+        <input className="input" style={{ maxWidth: 220 }} placeholder="Find a repo" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Find a repo" />
         <SortDropdown value={sort} options={SORTS} onChange={setSort} ariaLabel="Sort projects" />
       </div>
       {error ? <p className="form-error">{error}</p> : null}
@@ -214,11 +205,18 @@ export function DashboardClient({
         ) : null}
       </div>
       {visible.length === 0 && authed ? (
-        <div className="card">
-          <div className="card-title">No projects yet</div>
-          <p className="card-body">Add repos to pull your public GitHub repositories in automatically.</p>
-          <p><button className="btn btn-primary" onClick={onAddRepos} disabled={adding}>{adding ? "Adding" : "Add repos"}</button></p>
-        </div>
+        query.trim() ? (
+          <div className="card">
+            <div className="card-title">No matching repos</div>
+            <p className="card-body">No repository name matches that search.</p>
+          </div>
+        ) : (
+          <div className="card">
+            <div className="card-title">No projects yet</div>
+            <p className="card-body">Add repos to pull your public GitHub repositories in automatically.</p>
+            <p><button className="btn btn-primary" onClick={onAddRepos} disabled={adding}>{adding ? "Adding" : "Add repos"}</button></p>
+          </div>
+        )
       ) : null}
       <div className="grid-3">
         {visible.map((p) => (
